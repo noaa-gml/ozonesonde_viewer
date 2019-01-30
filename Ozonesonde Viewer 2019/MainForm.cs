@@ -20,14 +20,14 @@ namespace Ozonesonde_Viewer_2019
             public OzonesondeConfig OzoneConfig { get; set; }
 
             //measurements
-            public double CellCurrent { get; set; }
-            public double PumpTemperature { get; set; }
-            public double PumpCurrent { get; set; }
-            public double BatteryVoltage { get; set; }
+            public double CellCurrent { get; set; }//uA
+            public double PumpTemperature { get; set; }//deg C
+            public double PumpCurrent { get; set; }//mA
+            public double BatteryVoltage { get; set; }//V
 
             //calculations
-            public double OzonePartialPressure { get; set; }
-            public double OzoneMixingRatio { get; set; }
+            public double OzonePartialPressure { get; set; }//mPa
+            public double OzoneMixingRatio { get; set; }//ppbv
 
             public OzoneConfigAndData()
             {
@@ -51,8 +51,8 @@ namespace Ozonesonde_Viewer_2019
         private Task processSerialTask;
 
         //synchronization and writer class for the log file
-        private readonly Nito.AsyncEx.AsyncLock logWriterAsyncLock = new Nito.AsyncEx.AsyncLock();
-        private StreamWriter logWriter = null;
+        private readonly Nito.AsyncEx.AsyncLock outputDataWriterAsyncLock = new Nito.AsyncEx.AsyncLock();
+        private StreamWriter outputDataWriter = null;
 
         public MainForm()
         {
@@ -70,6 +70,16 @@ namespace Ozonesonde_Viewer_2019
                 sc = SynchronizationContext.Current;
 
                 this.DoubleBuffered = true;
+
+                using (await outputDataWriterAsyncLock.LockAsync())
+                {
+                    DateTime utcNow = DateTime.UtcNow;
+                    string outputDataFilename = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Ozonesonde Viewer",
+                    string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
+                    outputDataWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
+                }
 
                 ConfigForm config = new ConfigForm();
                 if (config.ShowDialog() != DialogResult.OK)
@@ -304,7 +314,7 @@ namespace Ozonesonde_Viewer_2019
                 //calculate mixing ratio if we have a good pressure
                 if (!double.IsNaN(latestReceivedPressure) && (latestReceivedPressure > 0) && (latestReceivedPressure < 1200))
                 {
-                    ozoneConfigAndData.OzoneMixingRatio = ozoneConfigAndData.OzonePartialPressure / latestReceivedPressure * 10.0;
+                    ozoneConfigAndData.OzoneMixingRatio = ozoneConfigAndData.OzonePartialPressure / latestReceivedPressure * 10 * 1000;//the last * 1000 converts to ppb
                 }
 
 
@@ -365,11 +375,12 @@ namespace Ozonesonde_Viewer_2019
             }
 
             
-
-            using (await logWriterAsyncLock.LockAsync(cancellationToken))
-            {
-                await logWriter.WriteLineAsync(line);
-            }
+            //todo: file log output
+            //using (await outputDataWriterAsyncLock.LockAsync(cancellationToken))
+            //{
+            //    await outputDataWriter?.WriteLineAsync(string.Format("{0:0.}, {0:0.000}, {0:0.000}, {0:0.000}, {0:0.00}, {0:0.}, {0:0.0}", 
+            //        ));
+            //}
         }
 
         /**
@@ -390,14 +401,16 @@ namespace Ozonesonde_Viewer_2019
                 serialCancellationTokenSource?.Cancel();
                 if (processSerialTask != null) await processSerialTask;
 
+                //close the serial port
                 using (await serialAsyncLock.LockAsync())
                 {
                     if ((serialPort != null) && (serialPort.IsOpen)) serialPort.Close();
                 }
 
-                using (await logWriterAsyncLock.LockAsync())
+                //close the output data writer
+                using (await outputDataWriterAsyncLock.LockAsync())
                 {
-                    logWriter?.Close();
+                    outputDataWriter?.Close();
                 }
             }
             catch (Exception ex)
