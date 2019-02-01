@@ -17,7 +17,10 @@ namespace Ozonesonde_Viewer_2019
     {
         private class OzoneConfigAndData
         {
+            //the configuration parameters for this ozonesonde, set at program startup in the ConfigForm dialog
             public OzonesondeConfig OzoneConfig { get; set; }
+
+            public DateTime DateTimeStamp { get; set; }//utc
 
             //measurements
             public double CellCurrent { get; set; }//uA
@@ -29,6 +32,9 @@ namespace Ozonesonde_Viewer_2019
             public double OzonePartialPressure { get; set; }//mPa
             public double OzoneMixingRatio { get; set; }//ppbv
 
+            //set true after all the fields are filled out to indicate that file output should happen, set false when file output is complete
+            public bool IsReadyForOutput { get; set; }
+
             public OzoneConfigAndData()
             {
                 CellCurrent = double.NaN;
@@ -37,6 +43,24 @@ namespace Ozonesonde_Viewer_2019
                 BatteryVoltage = double.NaN;
                 OzonePartialPressure = double.NaN;
                 OzoneMixingRatio = double.NaN;
+
+                IsReadyForOutput = false;
+            }
+
+            public void CalculatePartialPressureAndMixingRatio(double pressure)
+            {
+                //calculate partial pressure
+                //NOTE: no pump efficiency correction applied since this program expects ground-level ozonesondes
+                double correctedFlowrate = /*effCorr **/
+                        OzoneConfig.PumpFlowrate * (1 + OzoneConfig.RHFlowrateCorr / 100);
+                OzonePartialPressure =
+                    4.3085E-4 * (CellCurrent - OzoneConfig.CellBackground) * (PumpTemperature + 273.15) * correctedFlowrate;
+
+                //calculate mixing ratio if we have a good pressure
+                if (!double.IsNaN(pressure) && (pressure > 0) && (pressure < 1200))
+                {
+                    OzoneMixingRatio = OzonePartialPressure / pressure * 10 * 1000;//the last * 1000 converts to ppb
+                }
             }
         }
 
@@ -69,18 +93,6 @@ namespace Ozonesonde_Viewer_2019
             {
                 sc = SynchronizationContext.Current;
 
-                this.DoubleBuffered = true;
-
-                using (await outputDataWriterAsyncLock.LockAsync())
-                {
-                    DateTime utcNow = DateTime.UtcNow;
-                    string outputDataFilename = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Ozonesonde Viewer",
-                    string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
-                    outputDataWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
-                }
-
                 ConfigForm config = new ConfigForm();
                 if (config.ShowDialog() != DialogResult.OK)
                     this.Close();
@@ -91,6 +103,25 @@ namespace Ozonesonde_Viewer_2019
                     OzoneConfigAndData ocad = new OzoneConfigAndData();
                     ocad.OzoneConfig = ozoneConfig;
                     ozonesondeConfigAndDataList.Add(ocad);
+                }
+
+                //setup the output data file
+                using (await outputDataWriterAsyncLock.LockAsync())
+                {
+                    DateTime utcNow = DateTime.UtcNow;
+                    string outputDataFilename = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Ozonesonde Viewer",
+                    string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
+                    outputDataWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
+
+                    await outputDataWriter.WriteAsync("Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
+                    foreach (var ozoneConfig in ozonesondeConfigList)
+                    {
+                        await outputDataWriter.WriteAsync(
+                            ", DC Index, Ozone Mixing Ratio [ppbv], Ozone Partial Pressure [mPa], Cell Current [uA], Pump Temperature [deg C], Pump Current [mA], Battery Voltage [V]");
+                    }
+                    await outputDataWriter.WriteLineAsync();
                 }
 
                 //a cancellation token for the serial port processing task, used to exit gracefully
@@ -207,7 +238,7 @@ namespace Ozonesonde_Viewer_2019
 
                                     try
                                     {
-                                        processLineTask = ProcessSerialLineTask(lineBuilder.ToString(), cancellationToken);
+                                        processLineTask = ProcessSerialLineAsync(lineBuilder.ToString(), cancellationToken);
                                     }
                                     catch (Exception ex)
                                     {
@@ -269,8 +300,9 @@ namespace Ozonesonde_Viewer_2019
         private double latestCutterBatteryVoltage = double.NaN;
 
         private bool isFirstLine = true;
+        //private System.Diagnostics.Stopwatch timeSinceLastOutput = null;
 
-        private async Task ProcessSerialLineTask(string line, CancellationToken cancellationToken)
+        private async Task ProcessSerialLineAsync(string line, CancellationToken cancellationToken)
         {
             if (!line.StartsWith("xdata=") && (!isFirstLine))
             {
@@ -284,6 +316,48 @@ namespace Ozonesonde_Viewer_2019
             if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
             if (instrumentID == INSTRUMENT_OZONESONDE)
             {
+                DateTime utcNow = DateTime.UtcNow;
+
+                //output data to disk when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
+                if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
+                {
+                    using (await outputDataWriterAsyncLock.LockAsync())
+                    {
+                        StringBuilder outBuilder = new StringBuilder();
+                        //output the cutter data
+                        outBuilder.Append(string.Format("{0:0.00}, {1:0.00}, {2:0.00}, {3:0.}, {4:0.0}", 
+                            latestReceivedPressure,
+                            latestCutterPressureSensorTemperature,
+                            latestCutterBoardTemperature,
+                            latestCutterHeaterPWM,
+                            latestCutterBatteryVoltage
+                            ));
+                        //output data from each ozonesonde
+                        foreach (var ocad in ozonesondeConfigAndDataList)
+                        {
+                            OzoneConfigAndData ocadToUse = ocad;
+                            //if this is a valid ozone data packet, recalculate O3PP and O3MR to make sure the latest pressure is used (sometimes prevents an initial NaN from being output to file)
+                            if (ocad.IsReadyForOutput) ocad.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);
+                            //if the packet is not ready for output, make a new empty one to output NaN values
+                            else ocadToUse = new OzoneConfigAndData();
+                            outBuilder.Append(string.Format(", {0:d}, {1:0.000}, {2:0.000}, {3:0.000}, {4:0.00}, {5:0.}, {6:0.0}",
+                                ocadToUse.OzoneConfig.DCIndex,
+                                ocadToUse.OzoneMixingRatio,
+                                ocadToUse.OzonePartialPressure,
+                                ocadToUse.CellCurrent,
+                                ocadToUse.PumpTemperature,
+                                ocadToUse.PumpCurrent,
+                                ocadToUse.BatteryVoltage
+                                ));
+
+                            //indicate that the packet has already been output to file and shouldn't be output again
+                            ocadToUse.IsReadyForOutput = false;
+                        }
+
+                        await outputDataWriter.WriteLineAsync(outBuilder.ToString());
+                    }
+                }
+
                 //parse raw ozonesonde fields
                 double cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
                 cellCurrent /= 1000;
@@ -305,18 +379,12 @@ namespace Ozonesonde_Viewer_2019
                 ozoneConfigAndData.PumpCurrent = pumpCurrent;
                 ozoneConfigAndData.BatteryVoltage = batteryVoltage;
 
-                //calculate partial pressure
-                //NOTE: no pump efficiency correction applied since this program expects ground-level ozonesondes
-                double correctedFlowrate = /*effCorr **/ ozoneConfigAndData.OzoneConfig.PumpFlowrate * (1 + ozoneConfigAndData.OzoneConfig.RHFlowrateCorr / 100);
-                ozoneConfigAndData.OzonePartialPressure =
-                    4.3085E-4 * (cellCurrent - ozoneConfigAndData.OzoneConfig.CellBackground) * (pumpTemperature + 273.15) * correctedFlowrate;
+                ozoneConfigAndData.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);
 
-                //calculate mixing ratio if we have a good pressure
-                if (!double.IsNaN(latestReceivedPressure) && (latestReceivedPressure > 0) && (latestReceivedPressure < 1200))
-                {
-                    ozoneConfigAndData.OzoneMixingRatio = ozoneConfigAndData.OzonePartialPressure / latestReceivedPressure * 10 * 1000;//the last * 1000 converts to ppb
-                }
 
+
+                ozoneConfigAndData.DateTimeStamp = utcNow;
+                ozoneConfigAndData.IsReadyForOutput = true;
 
                 //create a string representation of the ozone data to later show on the UI
                 List<string> firstOutputLineList = new List<string>();

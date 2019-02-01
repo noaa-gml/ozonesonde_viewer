@@ -30,6 +30,10 @@
         {
             this.dataRichTextBox = new System.Windows.Forms.RichTextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.cutterBatteryVoltageLabel = new System.Windows.Forms.Label();
+            this.label8 = new System.Windows.Forms.Label();
+            this.cutterHeaterLabel = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
             this.cutterBoardTemperatureLabel = new System.Windows.Forms.Label();
             this.cutterPressureSensorTemperatureLabel = new System.Windows.Forms.Label();
             this.cutterPressureLabel = new System.Windows.Forms.Label();
@@ -38,10 +42,6 @@
             this.label2 = new System.Windows.Forms.Label();
             this.statusRichTextBox = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.cutterHeaterLabel = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.cutterBatteryVoltageLabel = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -75,6 +75,42 @@
             this.groupBox1.TabIndex = 1;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Pressure Cutter Data";
+            // 
+            // cutterBatteryVoltageLabel
+            // 
+            this.cutterBatteryVoltageLabel.AutoSize = true;
+            this.cutterBatteryVoltageLabel.Location = new System.Drawing.Point(155, 68);
+            this.cutterBatteryVoltageLabel.Name = "cutterBatteryVoltageLabel";
+            this.cutterBatteryVoltageLabel.Size = new System.Drawing.Size(24, 13);
+            this.cutterBatteryVoltageLabel.TabIndex = 13;
+            this.cutterBatteryVoltageLabel.Text = "n/a";
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(6, 68);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(98, 13);
+            this.label8.TabIndex = 12;
+            this.label8.Text = "Battery Voltage [V]:";
+            // 
+            // cutterHeaterLabel
+            // 
+            this.cutterHeaterLabel.AutoSize = true;
+            this.cutterHeaterLabel.Location = new System.Drawing.Point(155, 55);
+            this.cutterHeaterLabel.Name = "cutterHeaterLabel";
+            this.cutterHeaterLabel.Size = new System.Drawing.Size(24, 13);
+            this.cutterHeaterLabel.TabIndex = 11;
+            this.cutterHeaterLabel.Text = "n/a";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(6, 55);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(78, 13);
+            this.label4.TabIndex = 10;
+            this.label4.Text = "Heater [PWM]:";
             // 
             // cutterBoardTemperatureLabel
             // 
@@ -150,42 +186,6 @@
             this.label1.TabIndex = 3;
             this.label1.Text = "Status:";
             // 
-            // cutterHeaterLabel
-            // 
-            this.cutterHeaterLabel.AutoSize = true;
-            this.cutterHeaterLabel.Location = new System.Drawing.Point(155, 55);
-            this.cutterHeaterLabel.Name = "cutterHeaterLabel";
-            this.cutterHeaterLabel.Size = new System.Drawing.Size(24, 13);
-            this.cutterHeaterLabel.TabIndex = 11;
-            this.cutterHeaterLabel.Text = "n/a";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(6, 55);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(78, 13);
-            this.label4.TabIndex = 10;
-            this.label4.Text = "Heater [PWM]:";
-            // 
-            // cutterBatteryVoltageLabel
-            // 
-            this.cutterBatteryVoltageLabel.AutoSize = true;
-            this.cutterBatteryVoltageLabel.Location = new System.Drawing.Point(155, 68);
-            this.cutterBatteryVoltageLabel.Name = "cutterBatteryVoltageLabel";
-            this.cutterBatteryVoltageLabel.Size = new System.Drawing.Size(24, 13);
-            this.cutterBatteryVoltageLabel.TabIndex = 13;
-            this.cutterBatteryVoltageLabel.Text = "n/a";
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(6, 68);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(98, 13);
-            this.label8.TabIndex = 12;
-            this.label8.Text = "Battery Voltage [V]:";
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -195,6 +195,7 @@
             this.Controls.Add(this.statusRichTextBox);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.dataRichTextBox);
+            this.DoubleBuffered = true;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Ozonesonde Viewer 2019";
