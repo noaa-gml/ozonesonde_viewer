@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.IO.Ports;
+using Ozonesonde_Viewer_2019.ExtensionMethods;
 
 namespace Ozonesonde_Viewer_2019
 {
@@ -355,6 +356,7 @@ namespace Ozonesonde_Viewer_2019
                         //update the UI thread safely by posting to the sync context
                         sc.Post(o =>
                         {
+                            dataRichTextBox.Suspend();
                             dataRichTextBox.Clear();
                             for (int i = 0; i < firstOutputLineList.Count; i++)
                             {
@@ -363,6 +365,7 @@ namespace Ozonesonde_Viewer_2019
                                 dataRichTextBox.AppendText(outputList[i] + Environment.NewLine);
                             }
                             dataRichTextBox.SelectionStart = 0;
+                            dataRichTextBox.Resume();
                         }, null);
 
                         writerTask = OutputDataFileRow();
@@ -421,6 +424,8 @@ namespace Ozonesonde_Viewer_2019
                         cutterHeaterLabel.Text = string.Format("{0:0.}", latestCutterHeaterPWM);
                         cutterBatteryVoltageLabel.Text = string.Format("{0:0.0}", latestCutterBatteryVoltage);
                     }, null);
+
+                    ShowCutterStatusLight();
                 }
 
             }
@@ -506,10 +511,7 @@ namespace Ozonesonde_Viewer_2019
         {
             sc.Post(o =>
             {
-                var g = statusPanel.CreateGraphics();
-                var circleDia = statusPanel.Height - 15 - 1;
-                int xPos = ((int)dcIndex - 1) * (circleDia + 3);
-                g.FillEllipse(new SolidBrush(Color.Purple), xPos, 15, circleDia, circleDia);
+                DrawStatusCircle(true, dcIndex, "O3_" + dcIndex);
 
                 System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
                 timer.Tick += StatusClearingTimerTick;
@@ -527,15 +529,41 @@ namespace Ozonesonde_Viewer_2019
             if (queueTimerAndIndex.timer != timer) throw new Exception("Timer mismatch");
             timer.Stop();
 
-            var g = statusPanel.CreateGraphics();
-            var circleDia = statusPanel.Height - 15 - 1;
-            int xPos = ((int)queueTimerAndIndex.dcIndex - 1) * (circleDia + 3);
-            g.FillEllipse(new SolidBrush(statusPanel.BackColor), xPos, 15, circleDia, circleDia);
-
-            //var g = statusPanel.CreateGraphics();
-            //g.Clear(statusPanel.BackColor);
+            DrawStatusCircle(false, queueTimerAndIndex.dcIndex, "O3_" + queueTimerAndIndex.dcIndex);
         }
 
-        //private Font font = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
+        private System.Windows.Forms.Timer cutterStatusClearingTimer;
+        private void ShowCutterStatusLight()
+        {
+            sc.Post(o =>
+            {
+                DrawStatusCircle(true, 0, "CP");
+
+                cutterStatusClearingTimer = new System.Windows.Forms.Timer();
+                cutterStatusClearingTimer.Tick += CutterStatusClearingTimerTick;
+                cutterStatusClearingTimer.Interval = 200;
+                cutterStatusClearingTimer.Start();
+            }, null);
+        }
+
+        private void CutterStatusClearingTimerTick(object sender, EventArgs e)
+        {
+            cutterStatusClearingTimer.Stop();
+            DrawStatusCircle(false, 0, "CP");
+        }
+
+        private void DrawStatusCircle(bool isFilled, uint circleIndex, string text)
+        {
+            var g = ozoneStatusPanel.CreateGraphics();
+            var circleDia = ozoneStatusPanel.Height - 15 - 1;
+            int xPos = ((int)circleIndex) * (circleDia + 3);
+            g.DrawString(text, font, new SolidBrush(Color.Black), xPos, 0);
+            if (isFilled) g.FillEllipse(new SolidBrush(Color.Purple), xPos, 15, circleDia, circleDia);
+            else g.FillEllipse(new SolidBrush(ozoneStatusPanel.BackColor), xPos, 15, circleDia, circleDia);
+
+            //todo: invalidate?
+        }
+
+        private Font font = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
     }
 }

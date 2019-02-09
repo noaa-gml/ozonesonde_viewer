@@ -42,15 +42,14 @@
             this.label2 = new System.Windows.Forms.Label();
             this.statusRichTextBox = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.statusPanel = new System.Windows.Forms.Panel();
+            this.ozoneStatusPanel = new System.Windows.Forms.Panel();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // dataRichTextBox
             // 
-            this.dataRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            this.dataRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.dataRichTextBox.Location = new System.Drawing.Point(12, 12);
             this.dataRichTextBox.Name = "dataRichTextBox";
             this.dataRichTextBox.Size = new System.Drawing.Size(232, 357);
@@ -59,7 +58,8 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.Controls.Add(this.cutterBatteryVoltageLabel);
             this.groupBox1.Controls.Add(this.label8);
             this.groupBox1.Controls.Add(this.cutterHeaterLabel);
@@ -169,7 +169,8 @@
             // 
             // statusRichTextBox
             // 
-            this.statusRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.statusRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.statusRichTextBox.Location = new System.Drawing.Point(250, 121);
             this.statusRichTextBox.Name = "statusRichTextBox";
@@ -179,7 +180,6 @@
             // 
             // label1
             // 
-            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(250, 105);
             this.label1.Name = "label1";
@@ -187,20 +187,21 @@
             this.label1.TabIndex = 3;
             this.label1.Text = "Status:";
             // 
-            // statusPanel
+            // ozoneStatusPanel
             // 
-            this.statusPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.statusPanel.Location = new System.Drawing.Point(250, 329);
-            this.statusPanel.Name = "statusPanel";
-            this.statusPanel.Size = new System.Drawing.Size(225, 40);
-            this.statusPanel.TabIndex = 4;
+            this.ozoneStatusPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.ozoneStatusPanel.Location = new System.Drawing.Point(250, 329);
+            this.ozoneStatusPanel.Name = "ozoneStatusPanel";
+            this.ozoneStatusPanel.Size = new System.Drawing.Size(225, 40);
+            this.ozoneStatusPanel.TabIndex = 4;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(487, 381);
-            this.Controls.Add(this.statusPanel);
+            this.Controls.Add(this.ozoneStatusPanel);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.statusRichTextBox);
             this.Controls.Add(this.groupBox1);
@@ -234,6 +235,6 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label cutterHeaterLabel;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.Panel statusPanel;
+        private System.Windows.Forms.Panel ozoneStatusPanel;
     }
 }
