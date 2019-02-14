@@ -43,16 +43,20 @@
             this.statusRichTextBox = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.ozoneStatusPanel = new System.Windows.Forms.Panel();
+            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pressureForCalculationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox1.SuspendLayout();
+            this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // dataRichTextBox
             // 
             this.dataRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.dataRichTextBox.Location = new System.Drawing.Point(12, 12);
+            this.dataRichTextBox.Location = new System.Drawing.Point(12, 27);
             this.dataRichTextBox.Name = "dataRichTextBox";
-            this.dataRichTextBox.Size = new System.Drawing.Size(232, 357);
+            this.dataRichTextBox.Size = new System.Drawing.Size(232, 342);
             this.dataRichTextBox.TabIndex = 0;
             this.dataRichTextBox.Text = "";
             // 
@@ -70,7 +74,7 @@
             this.groupBox1.Controls.Add(this.label7);
             this.groupBox1.Controls.Add(this.label6);
             this.groupBox1.Controls.Add(this.label2);
-            this.groupBox1.Location = new System.Drawing.Point(250, 12);
+            this.groupBox1.Location = new System.Drawing.Point(250, 27);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(225, 87);
             this.groupBox1.TabIndex = 1;
@@ -172,16 +176,16 @@
             this.statusRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.statusRichTextBox.Location = new System.Drawing.Point(250, 118);
+            this.statusRichTextBox.Location = new System.Drawing.Point(250, 133);
             this.statusRichTextBox.Name = "statusRichTextBox";
-            this.statusRichTextBox.Size = new System.Drawing.Size(225, 205);
+            this.statusRichTextBox.Size = new System.Drawing.Size(225, 190);
             this.statusRichTextBox.TabIndex = 2;
             this.statusRichTextBox.Text = "";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(250, 102);
+            this.label1.Location = new System.Drawing.Point(247, 117);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(40, 13);
             this.label1.TabIndex = 3;
@@ -196,6 +200,31 @@
             this.ozoneStatusPanel.Size = new System.Drawing.Size(225, 40);
             this.ozoneStatusPanel.TabIndex = 4;
             // 
+            // menuStrip1
+            // 
+            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.optionsToolStripMenuItem});
+            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+            this.menuStrip1.Name = "menuStrip1";
+            this.menuStrip1.Size = new System.Drawing.Size(487, 24);
+            this.menuStrip1.TabIndex = 5;
+            this.menuStrip1.Text = "menuStrip1";
+            // 
+            // optionsToolStripMenuItem
+            // 
+            this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.pressureForCalculationsToolStripMenuItem});
+            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
+            this.optionsToolStripMenuItem.Text = "&Options";
+            // 
+            // pressureForCalculationsToolStripMenuItem
+            // 
+            this.pressureForCalculationsToolStripMenuItem.Name = "pressureForCalculationsToolStripMenuItem";
+            this.pressureForCalculationsToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.pressureForCalculationsToolStripMenuItem.Text = "&Pressure for Calculations";
+            this.pressureForCalculationsToolStripMenuItem.Click += new System.EventHandler(this.pressureForCalculationsToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -206,7 +235,9 @@
             this.Controls.Add(this.statusRichTextBox);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.dataRichTextBox);
+            this.Controls.Add(this.menuStrip1);
             this.DoubleBuffered = true;
+            this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Ozonesonde Viewer 2019";
@@ -214,6 +245,8 @@
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            this.menuStrip1.ResumeLayout(false);
+            this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -236,5 +269,8 @@
         private System.Windows.Forms.Label cutterHeaterLabel;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Panel ozoneStatusPanel;
+        private System.Windows.Forms.MenuStrip menuStrip1;
+        private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pressureForCalculationsToolStripMenuItem;
     }
 }

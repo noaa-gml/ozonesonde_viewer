@@ -91,6 +91,12 @@
     <Compile Include="OzonesondeConfigControl.Designer.cs">
       <DependentUpon>OzonesondeConfigControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="PressureForCalculationsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PressureForCalculationsForm.Designer.cs">
+      <DependentUpon>PressureForCalculationsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="ConfigForm.resx">
@@ -101,6 +107,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="OzonesondeConfigControl.resx">
       <DependentUpon>OzonesondeConfigControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PressureForCalculationsForm.resx">
+      <DependentUpon>PressureForCalculationsForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
