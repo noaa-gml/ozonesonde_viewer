@@ -23,11 +23,14 @@ namespace Ozonesonde_Viewer_2019
 
             public DateTime DateTimeStamp { get; set; }//utc
 
+            public string ADBoardType { get; set; }//V7 or X1 for now
+
             //measurements
             public double CellCurrent { get; set; }//uA
             public double PumpTemperature { get; set; }//deg C
             public double PumpCurrent { get; set; }//mA
             public double BatteryVoltage { get; set; }//V
+            public double PumpMotorRPM { get; set; }//RPM
 
             //calculations
             public double OzonePartialPressure { get; set; }//mPa
@@ -77,8 +80,8 @@ namespace Ozonesonde_Viewer_2019
         private Task processSerialTask;
 
         //synchronization and writer class for the log file
-        private readonly Nito.AsyncEx.AsyncLock outputDataWriterAsyncLock = new Nito.AsyncEx.AsyncLock();
-        private StreamWriter outputDataWriter = null;
+        private readonly Nito.AsyncEx.AsyncLock outputFileWriterAsyncLock = new Nito.AsyncEx.AsyncLock();
+        private StreamWriter outputFileWriter = null;
 
         public MainForm()
         {
@@ -113,22 +116,22 @@ namespace Ozonesonde_Viewer_2019
                 }
 
                 //setup the output data file
-                using (await outputDataWriterAsyncLock.LockAsync())
+                using (await outputFileWriterAsyncLock.LockAsync())
                 {
                     DateTime utcNow = DateTime.UtcNow;
                     string outputDataFilename = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "Ozonesonde Viewer",
                     string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
-                    outputDataWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
+                    outputFileWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
 
-                    await outputDataWriter.WriteAsync("Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
+                    await outputFileWriter.WriteAsync("Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
                     foreach (var ozoneConfig in ozonesondeConfigList)
                     {
-                        await outputDataWriter.WriteAsync(
-                            ", DC Index, Ozone Mixing Ratio [ppbv], Ozone Partial Pressure [mPa], Cell Current [uA], Pump Temperature [deg C], Pump Current [mA], Battery Voltage [V]");
+                        await outputFileWriter.WriteAsync(
+                            ", DC Index, Ozone Mixing Ratio [ppbv], Ozone Partial Pressure [mPa], Cell Current [uA], Pump Temperature [deg C], Pump Current [mA], Battery Voltage [V], Pump Speed [RPM]");
                     }
-                    await outputDataWriter.WriteLineAsync();
+                    await outputFileWriter.WriteLineAsync();
                 }
 
                 //a cancellation token for the serial port processing task, used to exit gracefully
@@ -239,21 +242,24 @@ namespace Ozonesonde_Viewer_2019
                             //process incoming characters into separate lines
                             foreach (var charValue in charBuffer)
                             {
-                                if (((charValue == '\r') || (charValue == '\n')) && (lineBuilder.Length > 0))
+                                if ((charValue == '\r') || (charValue == '\n'))
                                 {
-                                    if (processLineTask != null) await processLineTask;
-
-                                    try
+                                    if (lineBuilder.Length > 0)
                                     {
-                                        var line = lineBuilder.ToString();
-                                        processLineTask = ProcessSerialLineAsync(line, cancellationToken);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        ShowError("Error processing serial line: " + ex.ToString());
-                                    }
+                                        if (processLineTask != null) await processLineTask;
 
-                                    lineBuilder.Clear();
+                                        try
+                                        {
+                                            var line = lineBuilder.ToString();
+                                            processLineTask = ProcessSerialLineAsync(line, cancellationToken);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            ShowError("Error processing serial line: " + ex.ToString());
+                                        }
+
+                                        lineBuilder.Clear();
+                                    }
                                 }
                                 else
                                 {
@@ -279,6 +285,7 @@ namespace Ozonesonde_Viewer_2019
         private const int DC_INDEX_OFFSET = 8;
         private const int DC_INDEX_SIZE = 2;
         private const byte INSTRUMENT_OZONESONDE = 0x01;
+        private const byte INSTRUMENT_OZONESONDE_X1 = 0x03;//the X1 board's packet uses a different ID and includes pump motor RPM
         private const byte INSTRUMENT_CUTTER = 0x11;
         private const int CELL_CURRENT_OFFSET = 10;
         private const int CELL_CURRENT_SIZE = 4;
@@ -288,6 +295,8 @@ namespace Ozonesonde_Viewer_2019
         private const int PUMP_CURRENT_SIZE = 2;
         private const int BATTERY_VOLTAGE_OFFSET = 20;
         private const int BATTERY_VOLTAGE_SIZE = 2;
+        private const int PUMP_MOTOR_RPM_OFFSET = 22;
+        private const int PUMP_MOTOR_RPM_SIZE = 4;
 
         private const int CUTTER_PRESSURE_OFFSET = 10;
         private const int CUTTER_PRESSURE_SIZE = 8;
@@ -324,11 +333,11 @@ namespace Ozonesonde_Viewer_2019
                 byte instrumentID = Byte.Parse(line.Substring(INSTRUMENT_ID_OFFSET, INSTRUMENT_ID_SIZE), System.Globalization.NumberStyles.HexNumber);
                 byte dcIndex = Byte.Parse(line.Substring(DC_INDEX_OFFSET, DC_INDEX_SIZE), System.Globalization.NumberStyles.HexNumber);
                 if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
-                if (instrumentID == INSTRUMENT_OZONESONDE)
+                if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
                 {
                     DateTime utcNow = DateTime.UtcNow;
 
-                    Task writerTask = null;
+                    Task fileWriterTask = null;
                     //output data (to UI and file) when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
                     if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
                     {
@@ -342,15 +351,16 @@ namespace Ozonesonde_Viewer_2019
 
                             StringBuilder outputBuilder = new StringBuilder();
 
-                            firstOutputLineList.Add("Ozonesonde " + ocad.OzoneConfig.DCIndex + ":");
+                            firstOutputLineList.Add("Ozonesonde " + ocad.OzoneConfig.DCIndex + " (" + ocad.ADBoardType + "):");
                             outputBuilder.AppendLine(string.Format("Ozone Mixing Ratio [ppbv]:\t{0:0.000}", ocad.OzoneMixingRatio));
                             outputBuilder.AppendLine(string.Format("Ozone Partial Pressure [mPa]:\t{0:0.000}", ocad.OzonePartialPressure));
                             outputBuilder.AppendLine(string.Format("Cell Current [uA]:\t\t{0:0.000}", ocad.CellCurrent));
                             outputBuilder.AppendLine(string.Format("Pump Temperature [deg C]:\t{0:0.00}", ocad.PumpTemperature));
                             outputBuilder.AppendLine(string.Format("Pump Current [mA]:\t\t{0:0.}", ocad.PumpCurrent));
                             outputBuilder.AppendLine(string.Format("Battery Voltage [V]:\t\t{0:0.0}", ocad.BatteryVoltage));
-                            outputBuilder.AppendLine(string.Format("Date/Time [UTC]: {0:d4}/{1:d2}/{2:d2} {3:d2}:{4:d2}:{5:d2}",
-                                ocad.DateTimeStamp.Year, ocad.DateTimeStamp.Month, ocad.DateTimeStamp.Day, ocad.DateTimeStamp.Hour, ocad.DateTimeStamp.Minute, ocad.DateTimeStamp.Second));
+                            outputBuilder.AppendLine(string.Format("Pump Speed [RPM]:\t{0:0.0}", ocad.PumpMotorRPM));
+                            //outputBuilder.AppendLine(string.Format("Date/Time [UTC]: {0:d4}/{1:d2}/{2:d2} {3:d2}:{4:d2}:{5:d2}",
+                            //    ocad.DateTimeStamp.Year, ocad.DateTimeStamp.Month, ocad.DateTimeStamp.Day, ocad.DateTimeStamp.Hour, ocad.DateTimeStamp.Minute, ocad.DateTimeStamp.Second));
                             outputList.Add(outputBuilder.ToString());
                         }
                         //update the UI thread safely by posting to the sync context
@@ -368,16 +378,48 @@ namespace Ozonesonde_Viewer_2019
                             dataRichTextBox.Resume();
                         }, null);
 
-                        writerTask = OutputDataFileRow();
+                        //start the file output
+                        fileWriterTask = OutputDataFileRow();
                     }
 
-                    //parse raw ozonesonde fields
-                    double cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
-                    cellCurrent /= 1000;
-                    double pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
-                    pumpTemperature /= 100;
-                    double pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
-                    double batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
+                    string adBoardType = "Unknown";
+                    double cellCurrent = double.NaN;
+                    double pumpTemperature = double.NaN;
+                    double pumpCurrent = double.NaN;
+                    double batteryVoltage = double.NaN;
+                    double pumpMotorRPM = double.NaN;
+                    //parse the standard (V7 and older X1) ozonesonde packet
+                    if (instrumentID == INSTRUMENT_OZONESONDE)
+                    {
+                        cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
+                        cellCurrent /= 1000;
+
+                        pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
+                        pumpTemperature /= 100;
+
+                        pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
+
+                        batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
+
+                        adBoardType = "V7";
+                    }
+                    //parse the new X1 ozonesonde packet that includes pump motor RPM
+                    else if (instrumentID == INSTRUMENT_OZONESONDE_X1)
+                    {
+                        cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
+                        cellCurrent /= 1000;
+
+                        pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
+                        pumpTemperature /= 100;
+
+                        pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
+
+                        batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
+
+                        pumpMotorRPM = ((double)IntFromMSBHexString(line.Substring(PUMP_MOTOR_RPM_OFFSET, PUMP_MOTOR_RPM_SIZE))) / 10.0;
+
+                        adBoardType = "X1";
+                    }
 
                     //select the dataset to update based on the daisy chain index
                     if (dcIndex > ozonesondeConfigAndDataList.Count)
@@ -391,6 +433,8 @@ namespace Ozonesonde_Viewer_2019
                     ozoneConfigAndData.PumpTemperature = pumpTemperature;
                     ozoneConfigAndData.PumpCurrent = pumpCurrent;
                     ozoneConfigAndData.BatteryVoltage = batteryVoltage;
+                    ozoneConfigAndData.PumpMotorRPM = pumpMotorRPM;
+                    ozoneConfigAndData.ADBoardType = adBoardType;
 
                     //ozoneConfigAndData.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);//calculated on UI/file output later
 
@@ -398,7 +442,7 @@ namespace Ozonesonde_Viewer_2019
                     ozoneConfigAndData.IsReadyForOutput = true;
 
                     ShowOzoneStatusLight(dcIndex);
-                    if (writerTask != null) await writerTask;
+                    if (fileWriterTask != null) await fileWriterTask;
                 }
                 else if (instrumentID == INSTRUMENT_CUTTER)
                 {
@@ -450,23 +494,25 @@ namespace Ozonesonde_Viewer_2019
 
                 //if the packet is not ready for output, make a new empty one to output NaN values
                 if (!ocad.IsReadyForOutput) ocadToUse = new OzoneConfigAndData();
-                fileOutputBuilder.Append(string.Format(", {0:d}, {1:0.000}, {2:0.000}, {3:0.000}, {4:0.00}, {5:0.}, {6:0.0}",
+
+                fileOutputBuilder.Append(string.Format(", {0:d}, {1:0.000}, {2:0.000}, {3:0.000}, {4:0.00}, {5:0.}, {6:0.0}, {7:0.0}",
                     ocadToUse.OzoneConfig.DCIndex,
                     ocadToUse.OzoneMixingRatio,
                     ocadToUse.OzonePartialPressure,
                     ocadToUse.CellCurrent,
                     ocadToUse.PumpTemperature,
                     ocadToUse.PumpCurrent,
-                    ocadToUse.BatteryVoltage
+                    ocadToUse.BatteryVoltage,
+                    ocadToUse.PumpMotorRPM
                     ));
 
                 //indicate that the packet has already been output to file and shouldn't be output again
                 ocad.IsReadyForOutput = false;
             }
 
-            using (await outputDataWriterAsyncLock.LockAsync())
+            using (await outputFileWriterAsyncLock.LockAsync())
             {
-                await outputDataWriter.WriteLineAsync(fileOutputBuilder.ToString());
+                await outputFileWriter.WriteLineAsync(fileOutputBuilder.ToString());
             }
         }
 
@@ -495,9 +541,9 @@ namespace Ozonesonde_Viewer_2019
                 }
 
                 //close the output data writer
-                using (await outputDataWriterAsyncLock.LockAsync())
+                using (await outputFileWriterAsyncLock.LockAsync())
                 {
-                    outputDataWriter?.Close();
+                    outputFileWriter?.Close();
                 }
             }
             catch (Exception ex)
@@ -511,7 +557,7 @@ namespace Ozonesonde_Viewer_2019
         {
             sc.Post(o =>
             {
-                DrawStatusCircle(true, dcIndex, "O3_" + dcIndex);
+                DrawStatusCircle(true, dcIndex, "O3_" + dcIndex, Color.Purple);
 
                 System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
                 timer.Tick += StatusClearingTimerTick;
@@ -529,7 +575,7 @@ namespace Ozonesonde_Viewer_2019
             if (queueTimerAndIndex.timer != timer) throw new Exception("Timer mismatch");
             timer.Stop();
 
-            DrawStatusCircle(false, queueTimerAndIndex.dcIndex, "O3_" + queueTimerAndIndex.dcIndex);
+            DrawStatusCircle(false, queueTimerAndIndex.dcIndex, "O3_" + queueTimerAndIndex.dcIndex, Color.Purple);
         }
 
         private System.Windows.Forms.Timer cutterStatusClearingTimer;
@@ -537,7 +583,7 @@ namespace Ozonesonde_Viewer_2019
         {
             sc.Post(o =>
             {
-                DrawStatusCircle(true, 0, "CP");
+                DrawStatusCircle(true, 0, "CP", Color.Blue);
 
                 cutterStatusClearingTimer = new System.Windows.Forms.Timer();
                 cutterStatusClearingTimer.Tick += CutterStatusClearingTimerTick;
@@ -549,16 +595,16 @@ namespace Ozonesonde_Viewer_2019
         private void CutterStatusClearingTimerTick(object sender, EventArgs e)
         {
             cutterStatusClearingTimer.Stop();
-            DrawStatusCircle(false, 0, "CP");
+            DrawStatusCircle(false, 0, "CP", Color.Blue);
         }
 
-        private void DrawStatusCircle(bool isFilled, uint circleIndex, string text)
+        private void DrawStatusCircle(bool isFilled, uint circleIndex, string text, Color filledColor)
         {
             var g = ozoneStatusPanel.CreateGraphics();
             var circleDia = ozoneStatusPanel.Height - 15 - 1;
             int xPos = ((int)circleIndex) * (circleDia + 3);
-            g.DrawString(text, font, new SolidBrush(Color.Black), xPos, 0);
-            if (isFilled) g.FillEllipse(new SolidBrush(Color.Purple), xPos, 15, circleDia, circleDia);
+            g.DrawString(text, font, new SolidBrush(Color.Black), xPos + ((4 - text.Length) * 2), 0);
+            if (isFilled) g.FillEllipse(new SolidBrush(filledColor), xPos, 15, circleDia, circleDia);
             else g.FillEllipse(new SolidBrush(ozoneStatusPanel.BackColor), xPos, 15, circleDia, circleDia);
 
             //todo: invalidate?
