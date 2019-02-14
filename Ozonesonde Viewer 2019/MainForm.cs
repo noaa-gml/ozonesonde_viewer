@@ -347,16 +347,19 @@ namespace Ozonesonde_Viewer_2019
                     //update the UI thread safely by posting to the sync context
                     sc.Post(o =>
                     {
-                        dataRichTextBox.Suspend();
-                        dataRichTextBox.Clear();
-                        for (int i = 0; i < firstOutputLineList.Count; i++)
+                        if (!dataRichTextBox.IsDisposed)
                         {
-                            dataRichTextBox.SelectionColor = Color.Green;
-                            dataRichTextBox.AppendText(firstOutputLineList[i] + Environment.NewLine);
-                            dataRichTextBox.AppendText(outputList[i] + Environment.NewLine);
+                            dataRichTextBox.Suspend();
+                            dataRichTextBox.Clear();
+                            for (int i = 0; i < firstOutputLineList.Count; i++)
+                            {
+                                dataRichTextBox.SelectionColor = Color.Green;
+                                dataRichTextBox.AppendText(firstOutputLineList[i] + Environment.NewLine);
+                                dataRichTextBox.AppendText(outputList[i] + Environment.NewLine);
+                            }
+                            dataRichTextBox.SelectionStart = 0;
+                            dataRichTextBox.Resume();
                         }
-                        dataRichTextBox.SelectionStart = 0;
-                        dataRichTextBox.Resume();
                     }, null);
 
                     //start the file output
@@ -479,7 +482,7 @@ namespace Ozonesonde_Viewer_2019
                 if (!ocad.IsReadyForOutput) ocadToUse = new OzoneConfigAndData();
 
                 fileOutputBuilder.Append(string.Format(", {0:d}, {1:0.000}, {2:0.000}, {3:0.000}, {4:0.00}, {5:0.}, {6:0.0}, {7:0.0}",
-                    (ocadToUse.OzoneConfig != null)? (int)ocadToUse.OzoneConfig.DCIndex:-999,
+                    (ocadToUse.OzoneConfig != null) ? (int)ocadToUse.OzoneConfig.DCIndex : -999,
                     ocadToUse.OzoneMixingRatio,
                     ocadToUse.OzonePartialPressure,
                     ocadToUse.CellCurrent,
@@ -493,11 +496,11 @@ namespace Ozonesonde_Viewer_2019
                 ocad.IsReadyForOutput = false;
             }
 
-            //using (await outputFileWriterAsyncLock.LockAsync())
-            //{
-                outputFileWriter.WriteLine(fileOutputBuilder.ToString());
-                //await outputFileWriter.WriteLineAsync(fileOutputBuilder.ToString());
-            //}
+            using (await outputFileWriterAsyncLock.LockAsync())
+            {
+                //outputFileWriter.WriteLine(fileOutputBuilder.ToString());
+                await outputFileWriter.WriteLineAsync(fileOutputBuilder.ToString());
+            }
         }
 
         /**
