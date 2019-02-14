@@ -38,7 +38,6 @@ namespace Ozonesonde_Viewer_2019
 
             //set true after all the fields are filled out to indicate that file output should happen, set false when file output is complete
             public bool IsReadyForOutput { get; set; }
-            public System.Windows.Forms.Timer StatusClearingTimer { get; set; }
 
             public OzoneConfigAndData()
             {
@@ -105,12 +104,10 @@ namespace Ozonesonde_Viewer_2019
                 ozonesondeConfigAndDataList = new List<OzoneConfigAndData>();
                 foreach (var ozoneConfig in ozonesondeConfigList)
                 {
-                    OzoneConfigAndData ocad = new OzoneConfigAndData();
-                    ocad.OzoneConfig = ozoneConfig;
-
-                    ocad.StatusClearingTimer = new System.Windows.Forms.Timer();
-                    ocad.StatusClearingTimer.Tick += StatusClearingTimerTick;
-                    ocad.StatusClearingTimer.Interval = 200;
+                    OzoneConfigAndData ocad = new OzoneConfigAndData
+                    {
+                        OzoneConfig = ozoneConfig
+                    };
 
                     ozonesondeConfigAndDataList.Add(ocad);
                 }
@@ -441,7 +438,7 @@ namespace Ozonesonde_Viewer_2019
                     ozoneConfigAndData.DateTimeStamp = utcNow;
                     ozoneConfigAndData.IsReadyForOutput = true;
 
-                    ShowOzoneStatusLight(dcIndex);
+                    HelperMethods.RunAsync(ShowOzoneStatusLightAsync(dcIndex));
                     if (fileWriterTask != null) await fileWriterTask;
                 }
                 else if (instrumentID == INSTRUMENT_CUTTER)
@@ -469,7 +466,7 @@ namespace Ozonesonde_Viewer_2019
                         cutterBatteryVoltageLabel.Text = string.Format("{0:0.0}", latestCutterBatteryVoltage);
                     }, null);
 
-                    ShowCutterStatusLight();
+                    HelperMethods.RunAsync(ShowCutterStatusLightAsync());
                 }
 
             }
@@ -552,50 +549,34 @@ namespace Ozonesonde_Viewer_2019
             }
         }
 
-        private Queue<(System.Windows.Forms.Timer timer, uint dcIndex)> timerQueue = new Queue<(System.Windows.Forms.Timer, uint dcIndex)>();
-        private void ShowOzoneStatusLight(uint dcIndex)
+        private async Task ShowOzoneStatusLightAsync(uint dcIndex)
         {
             sc.Post(o =>
             {
                 DrawStatusCircle(true, dcIndex, "O3_" + dcIndex, Color.Purple);
+            }, null);
 
-                System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-                timer.Tick += StatusClearingTimerTick;
-                timer.Interval = 200;
-                timerQueue.Enqueue((timer, dcIndex));
-                timer.Start();
+            await Task.Delay(200);
+
+            sc.Post(o =>
+            {
+                DrawStatusCircle(false, dcIndex, "O3_" + dcIndex, Color.Purple);
             }, null);
         }
 
-        private void StatusClearingTimerTick(object sender, EventArgs e)
-        {
-            if (timerQueue.Count <= 0) throw new Exception("Timer queue empty");
-            System.Windows.Forms.Timer timer = (System.Windows.Forms.Timer)sender;
-            var queueTimerAndIndex = timerQueue.Dequeue();
-            if (queueTimerAndIndex.timer != timer) throw new Exception("Timer mismatch");
-            timer.Stop();
-
-            DrawStatusCircle(false, queueTimerAndIndex.dcIndex, "O3_" + queueTimerAndIndex.dcIndex, Color.Purple);
-        }
-
-        private System.Windows.Forms.Timer cutterStatusClearingTimer;
-        private void ShowCutterStatusLight()
+        private async Task ShowCutterStatusLightAsync()
         {
             sc.Post(o =>
             {
                 DrawStatusCircle(true, 0, "CP", Color.Blue);
-
-                cutterStatusClearingTimer = new System.Windows.Forms.Timer();
-                cutterStatusClearingTimer.Tick += CutterStatusClearingTimerTick;
-                cutterStatusClearingTimer.Interval = 200;
-                cutterStatusClearingTimer.Start();
             }, null);
-        }
 
-        private void CutterStatusClearingTimerTick(object sender, EventArgs e)
-        {
-            cutterStatusClearingTimer.Stop();
-            DrawStatusCircle(false, 0, "CP", Color.Blue);
+            await Task.Delay(200);
+
+            sc.Post(o =>
+            {
+                DrawStatusCircle(false, 0, "CP", Color.Blue);
+            }, null);
         }
 
         private void DrawStatusCircle(bool isFilled, uint circleIndex, string text, Color filledColor)
@@ -607,7 +588,7 @@ namespace Ozonesonde_Viewer_2019
             if (isFilled) g.FillEllipse(new SolidBrush(filledColor), xPos, 15, circleDia, circleDia);
             else g.FillEllipse(new SolidBrush(ozoneStatusPanel.BackColor), xPos, 15, circleDia, circleDia);
 
-            //todo: invalidate?
+            //todo: invalidate?  doesn't seem to be necessary
         }
 
         private Font font = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
