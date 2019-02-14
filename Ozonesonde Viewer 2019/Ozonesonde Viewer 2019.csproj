@@ -84,7 +84,7 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="OzonesondeConfig.cs" />
+    <Compile Include="OzoneConfigAndData.cs" />
     <Compile Include="OzonesondeConfigControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

@@ -16,60 +16,9 @@ namespace Ozonesonde_Viewer_2019
 {
     public partial class MainForm : Form
     {
-        private class OzoneConfigAndData
-        {
-            //the configuration parameters for this ozonesonde, set at program startup in the ConfigForm dialog
-            public OzonesondeConfig OzoneConfig { get; set; }
-
-            public DateTime DateTimeStamp { get; set; }//utc
-
-            public string ADBoardType { get; set; }//V7 or X1 for now
-
-            //measurements
-            public double CellCurrent { get; set; }//uA
-            public double PumpTemperature { get; set; }//deg C
-            public double PumpCurrent { get; set; }//mA
-            public double BatteryVoltage { get; set; }//V
-            public double PumpMotorRPM { get; set; }//RPM
-
-            //calculations
-            public double OzonePartialPressure { get; set; }//mPa
-            public double OzoneMixingRatio { get; set; }//ppbv
-
-            //set true after all the fields are filled out to indicate that file output should happen, set false when file output is complete
-            public bool IsReadyForOutput { get; set; }
-
-            public OzoneConfigAndData()
-            {
-                CellCurrent = double.NaN;
-                PumpTemperature = double.NaN;
-                PumpCurrent = double.NaN;
-                BatteryVoltage = double.NaN;
-                OzonePartialPressure = double.NaN;
-                OzoneMixingRatio = double.NaN;
-
-                IsReadyForOutput = false;
-            }
-
-            public void CalculatePartialPressureAndMixingRatio(double pressure)
-            {
-                //calculate partial pressure
-                //NOTE: no pump efficiency correction applied since this program expects ground-level ozonesondes
-                double correctedFlowrate = /*effCorr **/
-                        OzoneConfig.PumpFlowrate * (1 + OzoneConfig.RHFlowrateCorr / 100);
-                OzonePartialPressure =
-                    4.3085E-4 * (CellCurrent - OzoneConfig.CellBackground) * (PumpTemperature + 273.15) * correctedFlowrate;
-
-                //calculate mixing ratio if we have a good pressure
-                if (!double.IsNaN(pressure) && (pressure > 0) && (pressure < 1200))
-                {
-                    OzoneMixingRatio = OzonePartialPressure / pressure * 10 * 1000;//the last * 1000 converts to ppb
-                }
-            }
-        }
-
-        //ozonesonde and port information received from the config dialog
+        //ozonesonde data and config list
         private List<OzoneConfigAndData> ozonesondeConfigAndDataList;
+
         private SerialPort serialPort = null;
 
         //synchronization and task storage for the serial port
@@ -82,6 +31,10 @@ namespace Ozonesonde_Viewer_2019
         private readonly Nito.AsyncEx.AsyncLock outputFileWriterAsyncLock = new Nito.AsyncEx.AsyncLock();
         private StreamWriter outputFileWriter = null;
 
+        //font for the text above the blinking status lights
+        private Font statusFont = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
+
+        //constructor, mostly ignored in favor of the async load handler below
         public MainForm()
         {
             //setup the invariant culture
@@ -91,16 +44,21 @@ namespace Ozonesonde_Viewer_2019
             InitializeComponent();
         }
 
+        //do most of the form init here to keep things async
         private async void MainForm_Load(object sender, EventArgs e)
         {
             try
             {
+                //get the sync context for safe GUI updates from threads (tasks) later
                 sc = SynchronizationContext.Current;
 
+                //show the config form as a dialog, receiving ozonesonde metadata, setial port info, etc
                 ConfigForm config = new ConfigForm();
                 if (config.ShowDialog() != DialogResult.OK)
                     this.Close();
                 var ozonesondeConfigList = config.ResultingOzonesondeConfigList;
+
+                //rearrange the ozone config info into a list of OzoneConfigAndData that can also store data packets
                 ozonesondeConfigAndDataList = new List<OzoneConfigAndData>();
                 foreach (var ozoneConfig in ozonesondeConfigList)
                 {
@@ -108,20 +66,22 @@ namespace Ozonesonde_Viewer_2019
                     {
                         OzoneConfig = ozoneConfig
                     };
-
                     ozonesondeConfigAndDataList.Add(ocad);
                 }
 
                 //setup the output data file
                 using (await outputFileWriterAsyncLock.LockAsync())
                 {
+                    //the filename has year/month/day and is written to "<AppData>\Ozonesonde Viewer"
                     DateTime utcNow = DateTime.UtcNow;
                     string outputDataFilename = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "Ozonesonde Viewer",
                     string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
+                    //open the file for writing (will append instead of overwrite)
                     outputFileWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
 
+                    //write out the header information for the cutter and each ozonesonde
                     await outputFileWriter.WriteAsync("Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
                     foreach (var ozoneConfig in ozonesondeConfigList)
                     {
@@ -134,6 +94,7 @@ namespace Ozonesonde_Viewer_2019
                 //a cancellation token for the serial port processing task, used to exit gracefully
                 serialCancellationTokenSource = new CancellationTokenSource();
 
+                //connect to the serial port
                 await SerialConnectAsync(Properties.Settings.Default.Port, serialCancellationTokenSource.Token);
                 ShowStatus("Opened serial port " + Properties.Settings.Default.Port);
 
@@ -584,13 +545,10 @@ namespace Ozonesonde_Viewer_2019
             var g = ozoneStatusPanel.CreateGraphics();
             var circleDia = ozoneStatusPanel.Height - 15 - 1;
             int xPos = ((int)circleIndex) * (circleDia + 3);
-            g.DrawString(text, font, new SolidBrush(Color.Black), xPos + ((4 - text.Length) * 2), 0);
+            g.DrawString(text, statusFont, new SolidBrush(Color.Black), xPos + ((4 - text.Length) * 2), 0);
             if (isFilled) g.FillEllipse(new SolidBrush(filledColor), xPos, 15, circleDia, circleDia);
             else g.FillEllipse(new SolidBrush(ozoneStatusPanel.BackColor), xPos, 15, circleDia, circleDia);
-
             //todo: invalidate?  doesn't seem to be necessary
         }
-
-        private Font font = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
     }
 }
