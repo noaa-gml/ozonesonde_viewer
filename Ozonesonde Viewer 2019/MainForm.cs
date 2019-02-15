@@ -281,6 +281,7 @@ namespace Ozonesonde_Viewer_2019
         private double latestCutterBoardTemperature = double.NaN;
         private double latestCutterHeaterPWM = double.NaN;
         private double latestCutterBatteryVoltage = double.NaN;
+        private int cutterDCIndex = -1;
 
         private bool isFirstLine = true;
 
@@ -302,6 +303,9 @@ namespace Ozonesonde_Viewer_2019
                 if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
                 {
                     DateTime utcNow = DateTime.UtcNow;
+
+                    //make sure that the pressure cutter is at the end of the daisy chain, otherwise it shifts the ozonesonde dc indices
+                    if ((cutterDCIndex > 0) && (dcIndex > cutterDCIndex)) throw new SerialLineFormatException("The pressure cutter needs to be at the end of the chain");
 
                     //output data (to UI and file) when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
                     if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
@@ -445,6 +449,7 @@ namespace Ozonesonde_Viewer_2019
                     latestCutterHeaterPWM = (UInt16)IntFromMSBHexString(line.Substring(CUTTER_HEATER_OFFSET, CUTTER_HEATER_SIZE));
                     latestCutterBatteryVoltage = (byte)IntFromMSBHexString(line.Substring(CUTTER_BATTERY_OFFSET, CUTTER_BATTERY_SIZE));
                     latestCutterBatteryVoltage /= 10;
+                    cutterDCIndex = dcIndex;
 
                     double therm_res = (20000.0 * btempADC) / (1023.0 - btempADC);
                     latestCutterBoardTemperature = 1.0 / (.0007 + .00028 * Math.Log(therm_res) + (9.93007E-8) * (Math.Log(therm_res) * Math.Log(therm_res) * Math.Log(therm_res))) - 273.16;//deg C, approx
