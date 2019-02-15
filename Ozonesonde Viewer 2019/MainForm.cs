@@ -286,185 +286,186 @@ namespace Ozonesonde_Viewer_2019
 
         private async Task ProcessSerialLineAsync(string line, CancellationToken cancellationToken)
         {
-            //await Task.Run(async () =>
-            //{
-
-            //check for unrecognized serial data lines (ignoring the first line, as it's usually garbage)
-            if (!isFirstLine)
+            try
             {
-                if (!line.StartsWith("xdata="))
+                //check for unrecognized serial data lines (ignoring the first line, as it's usually garbage)
+                if (!isFirstLine)
                 {
-                    ShowError("Serial line not in xdata format");
-                    return;
+                    if (!line.StartsWith("xdata=")) throw new SerialLineFormatException("Serial line not in xdata format");
+                    if (line.Length <= 10) throw new SerialLineFormatException("XDATA line too short: " + line);
                 }
-                if (line.Length <= 10)
-                {
-                    ShowError("XDATA line too short: " + line);
-                    return;
-                }
-            }
-            isFirstLine = false;
+                isFirstLine = false;
 
-            byte instrumentID = Byte.Parse(line.Substring(INSTRUMENT_ID_OFFSET, INSTRUMENT_ID_SIZE), System.Globalization.NumberStyles.HexNumber);
-            byte dcIndex = Byte.Parse(line.Substring(DC_INDEX_OFFSET, DC_INDEX_SIZE), System.Globalization.NumberStyles.HexNumber);
-            if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
-            if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
-            {
-                DateTime utcNow = DateTime.UtcNow;
-
-                //output data (to UI and file) when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
-                if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
+                byte instrumentID = Byte.Parse(line.Substring(INSTRUMENT_ID_OFFSET, INSTRUMENT_ID_SIZE), System.Globalization.NumberStyles.HexNumber);
+                byte dcIndex = Byte.Parse(line.Substring(DC_INDEX_OFFSET, DC_INDEX_SIZE), System.Globalization.NumberStyles.HexNumber);
+                if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
+                if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
                 {
-                    //create a string representation of the ozone data to later show on the UI
-                    List<string> firstOutputLineList = new List<string>();
-                    List<string> outputList = new List<string>();
-                    foreach (var ocad in ozonesondeConfigAndDataList)
+                    DateTime utcNow = DateTime.UtcNow;
+
+                    //output data (to UI and file) when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
+                    if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
                     {
-                        //calculate the o3pp and o3mr here to keep things synched on output
-                        if (ocad.IsReadyForOutput)
+                        //create a string representation of the ozone data to later show on the UI
+                        List<string> firstOutputLineList = new List<string>();
+                        List<string> outputList = new List<string>();
+                        foreach (var ocad in ozonesondeConfigAndDataList)
                         {
-                            //check the "age" of the latest received pressure
-                            if (!double.IsNaN(latestReceivedPressure))
+                            //calculate the o3pp and o3mr here to keep things synched on output
+                            if (ocad.IsReadyForOutput)
                             {
-                                var latestPressureAgeMinutes = (DateTime.Now - dateTimeOfLatestPressure).TotalMinutes;
-                                if (latestPressureAgeMinutes > 30)
+                                //check the "age" of the latest received pressure
+                                if (!double.IsNaN(latestReceivedPressure))
                                 {
-                                    ShowStatus("The manually-entered pressure is " + string.Format("{0:0.0}", latestPressureAgeMinutes) + " minutes old and should be re-entered.");
+                                    var latestPressureAgeMinutes = (DateTime.Now - dateTimeOfLatestPressure).TotalMinutes;
+                                    if (latestPressureAgeMinutes > 30)
+                                    {
+                                        ShowStatus("The manually-entered pressure is " + string.Format("{0:0.0}", latestPressureAgeMinutes) + " minutes old and should be re-entered.");
+                                    }
                                 }
+                                ocad.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);
                             }
-                            ocad.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);
+
+                            StringBuilder outputBuilder = new StringBuilder();
+
+                            firstOutputLineList.Add("Ozonesonde " + ocad.OzoneConfig.DCIndex + " (" + ocad.ADBoardType + "):");
+                            outputBuilder.AppendLine(string.Format("Ozone Mixing Ratio [ppbv]:\t{0:0.000}", ocad.OzoneMixingRatio));
+                            outputBuilder.AppendLine(string.Format("Ozone Partial Pressure [mPa]:\t{0:0.000}", ocad.OzonePartialPressure));
+                            outputBuilder.AppendLine(string.Format("Cell Current [uA]:\t\t{0:0.000}", ocad.CellCurrent));
+                            outputBuilder.AppendLine(string.Format("Pump Temperature [deg C]:\t{0:0.00}", ocad.PumpTemperature));
+                            outputBuilder.AppendLine(string.Format("Pump Current [mA]:\t\t{0:0.}", ocad.PumpCurrent));
+                            outputBuilder.AppendLine(string.Format("Battery Voltage [V]:\t\t{0:0.0}", ocad.BatteryVoltage));
+                            outputBuilder.AppendLine(string.Format("Pump Speed [RPM]:\t{0:0.0}", ocad.PumpMotorRPM));
+                            //outputBuilder.AppendLine(string.Format("Date/Time [UTC]: {0:d4}/{1:d2}/{2:d2} {3:d2}:{4:d2}:{5:d2}",
+                            //    ocad.DateTimeStamp.Year, ocad.DateTimeStamp.Month, ocad.DateTimeStamp.Day, ocad.DateTimeStamp.Hour, ocad.DateTimeStamp.Minute, ocad.DateTimeStamp.Second));
+                            outputList.Add(outputBuilder.ToString());
                         }
+                        //update the UI thread safely by posting to the sync context
+                        sc.Post(o =>
+                        {
+                            if (!dataRichTextBox.IsDisposed)
+                            {
+                                dataRichTextBox.Suspend();
+                                dataRichTextBox.Clear();
+                                for (int i = 0; i < firstOutputLineList.Count; i++)
+                                {
+                                    dataRichTextBox.SelectionColor = Color.Green;
+                                    dataRichTextBox.AppendText(firstOutputLineList[i] + Environment.NewLine);
+                                    dataRichTextBox.AppendText(outputList[i] + Environment.NewLine);
+                                }
+                                dataRichTextBox.SelectionStart = 0;
+                                dataRichTextBox.Resume();
+                            }
+                        }, null);
 
-                        StringBuilder outputBuilder = new StringBuilder();
-
-                        firstOutputLineList.Add("Ozonesonde " + ocad.OzoneConfig.DCIndex + " (" + ocad.ADBoardType + "):");
-                        outputBuilder.AppendLine(string.Format("Ozone Mixing Ratio [ppbv]:\t{0:0.000}", ocad.OzoneMixingRatio));
-                        outputBuilder.AppendLine(string.Format("Ozone Partial Pressure [mPa]:\t{0:0.000}", ocad.OzonePartialPressure));
-                        outputBuilder.AppendLine(string.Format("Cell Current [uA]:\t\t{0:0.000}", ocad.CellCurrent));
-                        outputBuilder.AppendLine(string.Format("Pump Temperature [deg C]:\t{0:0.00}", ocad.PumpTemperature));
-                        outputBuilder.AppendLine(string.Format("Pump Current [mA]:\t\t{0:0.}", ocad.PumpCurrent));
-                        outputBuilder.AppendLine(string.Format("Battery Voltage [V]:\t\t{0:0.0}", ocad.BatteryVoltage));
-                        outputBuilder.AppendLine(string.Format("Pump Speed [RPM]:\t{0:0.0}", ocad.PumpMotorRPM));
-                        //outputBuilder.AppendLine(string.Format("Date/Time [UTC]: {0:d4}/{1:d2}/{2:d2} {3:d2}:{4:d2}:{5:d2}",
-                        //    ocad.DateTimeStamp.Year, ocad.DateTimeStamp.Month, ocad.DateTimeStamp.Day, ocad.DateTimeStamp.Hour, ocad.DateTimeStamp.Minute, ocad.DateTimeStamp.Second));
-                        outputList.Add(outputBuilder.ToString());
+                        //start the file output
+                        //if (fileWriterTask != null) await fileWriterTask;
+                        //fileWriterTask = OutputDataFileRow();
+                        await OutputDataFileRowAsync();
                     }
-                    //update the UI thread safely by posting to the sync context
+
+                    string adBoardType = "Unknown";
+                    double cellCurrent = double.NaN;
+                    double pumpTemperature = double.NaN;
+                    double pumpCurrent = double.NaN;
+                    double batteryVoltage = double.NaN;
+                    double pumpMotorRPM = double.NaN;
+                    //parse the standard (V7 and older X1) ozonesonde packet
+                    if (instrumentID == INSTRUMENT_OZONESONDE)
+                    {
+                        if (line.Length < (BATTERY_VOLTAGE_OFFSET + BATTERY_VOLTAGE_SIZE)) throw new SerialLineFormatException("Ozonesonde (V7) serial data line too short: " + line);
+
+                        cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
+                        cellCurrent /= 1000;
+
+                        pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
+                        pumpTemperature /= 100;
+
+                        pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
+
+                        batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
+
+                        adBoardType = "V7";
+                    }
+                    //parse the new X1 ozonesonde packet that includes pump motor RPM
+                    else if (instrumentID == INSTRUMENT_OZONESONDE_X1)
+                    {
+                        if (line.Length < (PUMP_MOTOR_RPM_OFFSET + PUMP_MOTOR_RPM_SIZE)) throw new SerialLineFormatException("Ozonesonde (X1) serial data line too short: " + line);
+
+                        cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
+                        cellCurrent /= 1000;
+
+                        pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
+                        pumpTemperature /= 100;
+
+                        pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
+
+                        batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
+
+                        pumpMotorRPM = ((double)IntFromMSBHexString(line.Substring(PUMP_MOTOR_RPM_OFFSET, PUMP_MOTOR_RPM_SIZE))) / 10.0;
+
+                        adBoardType = "X1";
+                    }
+
+                    //select the dataset to update based on the daisy chain index
+                    if (dcIndex > ozonesondeConfigAndDataList.Count)
+                    {
+                        //don't throw an exception here (since this message is easier to read without the call heirarchy)
+                        ShowError("Ozonesonde packet received for unconfigured dc index " + dcIndex + ".  Restart program and reconfigure.");
+                        return;
+                    }
+                    var ozoneConfigAndData = ozonesondeConfigAndDataList[dcIndex - 1];
+                    if (ozoneConfigAndData.OzoneConfig.DCIndex != dcIndex) throw new Exception("dc index mismatch");
+                    ozoneConfigAndData.CellCurrent = cellCurrent;
+                    ozoneConfigAndData.PumpTemperature = pumpTemperature;
+                    ozoneConfigAndData.PumpCurrent = pumpCurrent;
+                    ozoneConfigAndData.BatteryVoltage = batteryVoltage;
+                    ozoneConfigAndData.PumpMotorRPM = pumpMotorRPM;
+                    ozoneConfigAndData.ADBoardType = adBoardType;
+
+                    //ozoneConfigAndData.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);//calculated on UI/file output later
+
+                    ozoneConfigAndData.DateTimeStamp = utcNow;
+                    ozoneConfigAndData.IsReadyForOutput = true;
+
+                    HelperMethods.RunAsync(ShowOzoneStatusLightAsync(dcIndex), ShowError);
+                }
+                else if (instrumentID == INSTRUMENT_CUTTER)
+                {
+                    if (line.Length < (CUTTER_BATTERY_OFFSET + CUTTER_BATTERY_SIZE)) throw new SerialLineFormatException("Cutter serial data line too short: " + line);
+
+                    //xdata=110100013BEA0A41014B00001F
+                    string cutterPressOffsetStr = line.Substring(CUTTER_PRESSURE_OFFSET, CUTTER_PRESSURE_SIZE);
+                    latestReceivedPressure = (Int32)IntFromMSBHexString(cutterPressOffsetStr);
+                    latestReceivedPressure /= 100;//mb
+                    dateTimeOfLatestPressure = DateTime.Now;
+                    latestCutterPressureSensorTemperature = (Int16)IntFromMSBHexString(line.Substring(CUTTER_PTEMP_OFFSET, CUTTER_PTEMP_SIZE));
+                    latestCutterPressureSensorTemperature /= 100;//deg C
+                    int btempADC = (Int16)IntFromMSBHexString(line.Substring(CUTTER_BTEMP_OFFSET, CUTTER_BTEMP_SIZE));
+                    latestCutterHeaterPWM = (UInt16)IntFromMSBHexString(line.Substring(CUTTER_HEATER_OFFSET, CUTTER_HEATER_SIZE));
+                    latestCutterBatteryVoltage = (byte)IntFromMSBHexString(line.Substring(CUTTER_BATTERY_OFFSET, CUTTER_BATTERY_SIZE));
+                    latestCutterBatteryVoltage /= 10;
+
+                    double therm_res = (20000.0 * btempADC) / (1023.0 - btempADC);
+                    latestCutterBoardTemperature = 1.0 / (.0007 + .00028 * Math.Log(therm_res) + (9.93007E-8) * (Math.Log(therm_res) * Math.Log(therm_res) * Math.Log(therm_res))) - 273.16;//deg C, approx
+
                     sc.Post(o =>
                     {
-                        if (!dataRichTextBox.IsDisposed)
-                        {
-                            dataRichTextBox.Suspend();
-                            dataRichTextBox.Clear();
-                            for (int i = 0; i < firstOutputLineList.Count; i++)
-                            {
-                                dataRichTextBox.SelectionColor = Color.Green;
-                                dataRichTextBox.AppendText(firstOutputLineList[i] + Environment.NewLine);
-                                dataRichTextBox.AppendText(outputList[i] + Environment.NewLine);
-                            }
-                            dataRichTextBox.SelectionStart = 0;
-                            dataRichTextBox.Resume();
-                        }
+                        cutterPressureLabel.Text = string.Format("{0:0.00}", latestReceivedPressure);
+                        cutterPressureSensorTemperatureLabel.Text = string.Format("{0:0.00}", latestCutterPressureSensorTemperature);
+                        cutterBoardTemperatureLabel.Text = string.Format("{0:0.00}", latestCutterBoardTemperature);
+                        cutterHeaterLabel.Text = string.Format("{0:0.}", latestCutterHeaterPWM);
+                        cutterBatteryVoltageLabel.Text = string.Format("{0:0.0}", latestCutterBatteryVoltage);
                     }, null);
 
-                    //start the file output
-                    //if (fileWriterTask != null) await fileWriterTask;
-                    //fileWriterTask = OutputDataFileRow();
-                    await OutputDataFileRowAsync();
+                    HelperMethods.RunAsync(ShowCutterStatusLightAsync(), ShowError);
                 }
-
-                string adBoardType = "Unknown";
-                double cellCurrent = double.NaN;
-                double pumpTemperature = double.NaN;
-                double pumpCurrent = double.NaN;
-                double batteryVoltage = double.NaN;
-                double pumpMotorRPM = double.NaN;
-                //parse the standard (V7 and older X1) ozonesonde packet
-                if (instrumentID == INSTRUMENT_OZONESONDE)
-                {
-                    cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
-                    cellCurrent /= 1000;
-
-                    pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
-                    pumpTemperature /= 100;
-
-                    pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
-
-                    batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
-
-                    adBoardType = "V7";
-                }
-                //parse the new X1 ozonesonde packet that includes pump motor RPM
-                else if (instrumentID == INSTRUMENT_OZONESONDE_X1)
-                {
-                    cellCurrent = (Int16)IntFromMSBHexString(line.Substring(CELL_CURRENT_OFFSET, CELL_CURRENT_SIZE));
-                    cellCurrent /= 1000;
-
-                    pumpTemperature = (Int16)IntFromMSBHexString(line.Substring(PUMP_TEMPERATURE_OFFSET, PUMP_TEMPERATURE_SIZE));
-                    pumpTemperature /= 100;
-
-                    pumpCurrent = ((double)IntFromMSBHexString(line.Substring(PUMP_CURRENT_OFFSET, PUMP_CURRENT_SIZE)));
-
-                    batteryVoltage = ((double)IntFromMSBHexString(line.Substring(BATTERY_VOLTAGE_OFFSET, BATTERY_VOLTAGE_SIZE))) / 10.0;
-
-                    pumpMotorRPM = ((double)IntFromMSBHexString(line.Substring(PUMP_MOTOR_RPM_OFFSET, PUMP_MOTOR_RPM_SIZE))) / 10.0;
-
-                    adBoardType = "X1";
-                }
-
-                //select the dataset to update based on the daisy chain index
-                if (dcIndex > ozonesondeConfigAndDataList.Count)
-                {
-                    ShowError("Ozonesonde packet received for unconfigured dc index " + dcIndex + ".  Restart program and reconfigure.");
-                    return;
-                }
-                var ozoneConfigAndData = ozonesondeConfigAndDataList[dcIndex - 1];
-                if (ozoneConfigAndData.OzoneConfig.DCIndex != dcIndex) throw new Exception("dc index mismatch");
-                ozoneConfigAndData.CellCurrent = cellCurrent;
-                ozoneConfigAndData.PumpTemperature = pumpTemperature;
-                ozoneConfigAndData.PumpCurrent = pumpCurrent;
-                ozoneConfigAndData.BatteryVoltage = batteryVoltage;
-                ozoneConfigAndData.PumpMotorRPM = pumpMotorRPM;
-                ozoneConfigAndData.ADBoardType = adBoardType;
-
-                //ozoneConfigAndData.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);//calculated on UI/file output later
-
-                ozoneConfigAndData.DateTimeStamp = utcNow;
-                ozoneConfigAndData.IsReadyForOutput = true;
-
-                HelperMethods.RunAsync(ShowOzoneStatusLightAsync(dcIndex), ShowError);
             }
-            else if (instrumentID == INSTRUMENT_CUTTER)
+            catch (SerialLineFormatException serialLineException)
             {
-                //xdata=110100013BEA0A41014B00001F
-                string cutterPressOffsetStr = line.Substring(CUTTER_PRESSURE_OFFSET, CUTTER_PRESSURE_SIZE);
-                latestReceivedPressure = (Int32)IntFromMSBHexString(cutterPressOffsetStr);
-                latestReceivedPressure /= 100;//mb
-                dateTimeOfLatestPressure = DateTime.Now;
-                latestCutterPressureSensorTemperature = (Int16)IntFromMSBHexString(line.Substring(CUTTER_PTEMP_OFFSET, CUTTER_PTEMP_SIZE));
-                latestCutterPressureSensorTemperature /= 100;//deg C
-                int btempADC = (Int16)IntFromMSBHexString(line.Substring(CUTTER_BTEMP_OFFSET, CUTTER_BTEMP_SIZE));
-                latestCutterHeaterPWM = (UInt16)IntFromMSBHexString(line.Substring(CUTTER_HEATER_OFFSET, CUTTER_HEATER_SIZE));
-                latestCutterBatteryVoltage = (byte)IntFromMSBHexString(line.Substring(CUTTER_BATTERY_OFFSET, CUTTER_BATTERY_SIZE));
-                latestCutterBatteryVoltage /= 10;
-
-                double therm_res = (20000.0 * btempADC) / (1023.0 - btempADC);
-                latestCutterBoardTemperature = 1.0 / (.0007 + .00028 * Math.Log(therm_res) + (9.93007E-8) * (Math.Log(therm_res) * Math.Log(therm_res) * Math.Log(therm_res))) - 273.16;//deg C, approx
-
-                sc.Post(o =>
-                {
-                    cutterPressureLabel.Text = string.Format("{0:0.00}", latestReceivedPressure);
-                    cutterPressureSensorTemperatureLabel.Text = string.Format("{0:0.00}", latestCutterPressureSensorTemperature);
-                    cutterBoardTemperatureLabel.Text = string.Format("{0:0.00}", latestCutterBoardTemperature);
-                    cutterHeaterLabel.Text = string.Format("{0:0.}", latestCutterHeaterPWM);
-                    cutterBatteryVoltageLabel.Text = string.Format("{0:0.0}", latestCutterBatteryVoltage);
-                }, null);
-
-                HelperMethods.RunAsync(ShowCutterStatusLightAsync(), ShowError);
+                ShowError("Serial line format error: " + serialLineException.ToString());
             }
-
-            //}
-            //);//end of Task.Run
+            //todo: other exception types?
         }
 
         private async Task OutputDataFileRowAsync()

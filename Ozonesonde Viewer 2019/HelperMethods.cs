@@ -23,4 +23,21 @@ namespace Ozonesonde_Viewer_2019
             }, TaskContinuationOptions.OnlyOnFaulted);
         }
     }
+
+    public class SerialLineFormatException : Exception
+    {
+        public SerialLineFormatException()
+        {
+        }
+
+        public SerialLineFormatException(string message)
+            : base(message)
+        {
+        }
+
+        public SerialLineFormatException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+    }
 }
