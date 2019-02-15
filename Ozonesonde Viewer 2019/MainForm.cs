@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using System.IO;
 using System.IO.Ports;
 using Ozonesonde_Viewer_2019.ExtensionMethods;
+using System.Reflection;
 
 namespace Ozonesonde_Viewer_2019
 {
@@ -42,6 +43,8 @@ namespace Ozonesonde_Viewer_2019
             System.Threading.Thread.CurrentThread.CurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
 
             InitializeComponent();
+
+            this.Text = "Ozonesonde Viewer 2019 " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
         }
 
         //do most of the form init here to keep things async
@@ -196,8 +199,6 @@ namespace Ozonesonde_Viewer_2019
                     {
                         if (!serialPort.IsOpen) throw new Exception("Serial port no longer open");
 
-                        //Task writeLogTask = null;
-                        Task processLineTask = null;
                         while ((serialPort.BytesToRead > 0) && (!cancellationToken.IsCancellationRequested))
                         {
                             int bytesToRead = serialPort.BytesToRead;
@@ -212,12 +213,9 @@ namespace Ozonesonde_Viewer_2019
                                 {
                                     if (lineBuilder.Length > 0)
                                     {
-                                        //if (processLineTask != null) await processLineTask;
-
                                         try
                                         {
                                             var line = lineBuilder.ToString();
-                                            //processLineTask = ProcessSerialLineAsync(line, cancellationToken);
                                             await ProcessSerialLineAsync(line, cancellationToken);
                                         }
                                         catch (Exception ex)
@@ -596,6 +594,16 @@ namespace Ozonesonde_Viewer_2019
                 latestReceivedPressure = form.Pressure;
                 cutterPressureLabel.Text = string.Format("{0:0.00}", latestReceivedPressure);
             }
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            StringBuilder textBuilder = new StringBuilder();
+            textBuilder.AppendLine("Ozonesonde Viewer 2019");
+            textBuilder.AppendLine("Allen Jordan, NOAA GMD/OZWV");
+            textBuilder.AppendLine("allen.jordan@noaa.gov");
+            textBuilder.Append("https://www.esrl.noaa.gov/gmd/ozwv/");
+            MessageBox.Show(this, textBuilder.ToString(), "About", MessageBoxButtons.OK, MessageBoxIcon.None);
         }
     }
 }

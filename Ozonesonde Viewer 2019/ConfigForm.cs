@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using System.IO;
 using Newtonsoft.Json;
 using System.IO.Ports;
+using System.Reflection;
 
 namespace Ozonesonde_Viewer_2019
 {
@@ -30,6 +31,8 @@ namespace Ozonesonde_Viewer_2019
                     "OzonesondeViewerSettings.json");
 
                 InitializeComponent();
+
+                this.Text = "Ozonesonde Viewer 2019 Config " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
                 ResultingOzonesondeConfigList = null;
 
