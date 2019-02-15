@@ -112,23 +112,23 @@ namespace Ozonesonde_Viewer_2019
 
         private async Task SerialConnectAsync(string port, CancellationToken cancellationToken)
         {
-            await Task.Run(async () =>
+            //await Task.Run(async () =>//not really necessary, this is not very CPU bound
+            //{
+            using (await serialAsyncLock.LockAsync(cancellationToken))
             {
-                using (await serialAsyncLock.LockAsync(cancellationToken))
+                if (serialPort == null)
                 {
-                    if (serialPort == null)
-                    {
-                        serialPort = new SerialPort(Properties.Settings.Default.Port, 9600, Parity.None, 8, StopBits.One);
-                        serialPort.Open();
-                    }
-                    else
-                    {
-                        if (serialPort.IsOpen) serialPort.Close();
-                        serialPort.PortName = port;
-                        serialPort.Open();
-                    }
+                    serialPort = new SerialPort(Properties.Settings.Default.Port, 9600, Parity.None, 8, StopBits.One);
+                    serialPort.Open();
                 }
-            });
+                else
+                {
+                    if (serialPort.IsOpen) serialPort.Close();
+                    serialPort.PortName = port;
+                    serialPort.Open();
+                }
+            }
+            //});
         }
 
         private void ShowError(string message)
@@ -285,18 +285,25 @@ namespace Ozonesonde_Viewer_2019
         private double latestCutterBatteryVoltage = double.NaN;
 
         private bool isFirstLine = true;
-        //private System.Diagnostics.Stopwatch timeSinceLastOutput = null;
-
-        private Task fileWriterTask = null;
 
         private async Task ProcessSerialLineAsync(string line, CancellationToken cancellationToken)
         {
             //await Task.Run(async () =>
             //{
-            if (!line.StartsWith("xdata=") && (!isFirstLine))
+
+            //check for unrecognized serial data lines (ignoring the first line, as it's usually garbage)
+            if (!isFirstLine)
             {
-                ShowError("Serial line not in xdata format");
-                return;
+                if (!line.StartsWith("xdata="))
+                {
+                    ShowError("Serial line not in xdata format");
+                    return;
+                }
+                if (line.Length <= 10)
+                {
+                    ShowError("XDATA line too short: " + line);
+                    return;
+                }
             }
             isFirstLine = false;
 
