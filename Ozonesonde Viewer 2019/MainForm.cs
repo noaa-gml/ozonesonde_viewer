@@ -35,6 +35,8 @@ namespace Ozonesonde_Viewer_2019
         //font for the text above the blinking status lights
         private Font statusFont = new Font(FontFamily.GenericSansSerif, 7.0f, FontStyle.Regular);
 
+        private OzonePlot ozonePlotForm;
+
         //constructor, mostly ignored in favor of the async load handler below
         public MainForm()
         {
@@ -100,6 +102,10 @@ namespace Ozonesonde_Viewer_2019
                 //connect to the serial port
                 await SerialConnectAsync(Properties.Settings.Default.Port, serialCancellationTokenSource.Token);
                 ShowStatus("Opened serial port " + Properties.Settings.Default.Port);
+
+                //initialize the plot window
+                ozonePlotForm = new OzonePlot(ozonesondeConfigAndDataList);
+                ozonePlotForm.Show();
 
                 //start the seiral port processing background task
                 processSerialTask = ProcessSerialPortAsync(serialCancellationTokenSource.Token);
@@ -293,7 +299,7 @@ namespace Ozonesonde_Viewer_2019
                 if (!isFirstLine)
                 {
                     if (!line.StartsWith("xdata=")) throw new SerialLineFormatException("Serial line not in xdata format");
-                    if (line.Length <= 10) throw new SerialLineFormatException("XDATA line too short: " + line);
+                    if (line.Length <= 12) throw new SerialLineFormatException("XDATA line too short: " + line);
                 }
                 isFirstLine = false;
 
@@ -302,7 +308,7 @@ namespace Ozonesonde_Viewer_2019
                 if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
                 if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
                 {
-                    DateTime utcNow = DateTime.UtcNow;
+                    
 
                     //make sure that the pressure cutter is at the end of the daisy chain, otherwise it shifts the ozonesonde dc indices
                     if ((cutterDCIndex > 0) && (dcIndex > cutterDCIndex)) throw new SerialLineFormatException("The pressure cutter needs to be at the end of the chain");
@@ -310,18 +316,23 @@ namespace Ozonesonde_Viewer_2019
                     //output data (to UI and file) when the first DC index ozonesonde packet is received (assuming we've received at least one packet beforehand)
                     if ((dcIndex == 1) && (ozonesondeConfigAndDataList[0].IsReadyForOutput))
                     {
+                        DateTime utcNow = DateTime.UtcNow;
+
                         //create a string representation of the ozone data to later show on the UI
                         List<string> firstOutputLineList = new List<string>();
                         List<string> outputList = new List<string>();
                         foreach (var ocad in ozonesondeConfigAndDataList)
                         {
+                            //set all the timestamps at output so it's the same for each ozonesonde
+                            ocad.DateTimeStamp = utcNow;
+
                             //calculate the o3pp and o3mr here to keep things synched on output
                             if (ocad.IsReadyForOutput)
                             {
                                 //check the "age" of the latest received pressure
                                 if (!double.IsNaN(latestReceivedPressure))
                                 {
-                                    var latestPressureAgeMinutes = (DateTime.Now - dateTimeOfLatestPressure).TotalMinutes;
+                                    var latestPressureAgeMinutes = (DateTime.UtcNow - dateTimeOfLatestPressure).TotalMinutes;
                                     if (latestPressureAgeMinutes > 30)
                                     {
                                         ShowStatus("The manually-entered pressure is " + string.Format("{0:0.0}", latestPressureAgeMinutes) + " minutes old and should be re-entered.");
@@ -365,7 +376,7 @@ namespace Ozonesonde_Viewer_2019
                         //start the file output
                         //if (fileWriterTask != null) await fileWriterTask;
                         //fileWriterTask = OutputDataFileRow();
-                        await OutputDataFileRowAsync();
+                        await OutputDataFileAndPlotAsync();
                     }
 
                     string adBoardType = "Unknown";
@@ -429,7 +440,7 @@ namespace Ozonesonde_Viewer_2019
 
                     //ozoneConfigAndData.CalculatePartialPressureAndMixingRatio(latestReceivedPressure);//calculated on UI/file output later
 
-                    ozoneConfigAndData.DateTimeStamp = utcNow;
+                    //ozoneConfigAndData.DateTimeStamp = utcNow;//note: better to do this on output so the times are synched
                     ozoneConfigAndData.IsReadyForOutput = true;
 
                     HelperMethods.RunAsync(ShowOzoneStatusLightAsync(dcIndex), ShowError);
@@ -442,7 +453,7 @@ namespace Ozonesonde_Viewer_2019
                     string cutterPressOffsetStr = line.Substring(CUTTER_PRESSURE_OFFSET, CUTTER_PRESSURE_SIZE);
                     latestReceivedPressure = (Int32)IntFromMSBHexString(cutterPressOffsetStr);
                     latestReceivedPressure /= 100;//mb
-                    dateTimeOfLatestPressure = DateTime.Now;
+                    dateTimeOfLatestPressure = DateTime.UtcNow;
                     latestCutterPressureSensorTemperature = (Int16)IntFromMSBHexString(line.Substring(CUTTER_PTEMP_OFFSET, CUTTER_PTEMP_SIZE));
                     latestCutterPressureSensorTemperature /= 100;//deg C
                     int btempADC = (Int16)IntFromMSBHexString(line.Substring(CUTTER_BTEMP_OFFSET, CUTTER_BTEMP_SIZE));
@@ -473,7 +484,7 @@ namespace Ozonesonde_Viewer_2019
             //todo: other exception types?
         }
 
-        private async Task OutputDataFileRowAsync()
+        private async Task OutputDataFileAndPlotAsync()
         {
             StringBuilder fileOutputBuilder = new StringBuilder();
             //output the cutter data to file
@@ -502,6 +513,8 @@ namespace Ozonesonde_Viewer_2019
                     ocadToUse.BatteryVoltage,
                     ocadToUse.PumpMotorRPM
                     ));
+
+                ozonePlotForm.AddOzoneDataPoint(ocadToUse);
 
                 //indicate that the packet has already been output to file and shouldn't be output again
                 ocad.IsReadyForOutput = false;
@@ -596,7 +609,7 @@ namespace Ozonesonde_Viewer_2019
             PressureForCalculationsForm form = new PressureForCalculationsForm();
             if (form.ShowDialog() == DialogResult.OK)
             {
-                dateTimeOfLatestPressure = DateTime.Now;
+                dateTimeOfLatestPressure = DateTime.UtcNow;
                 latestReceivedPressure = form.Pressure;
                 cutterPressureLabel.Text = string.Format("{0:0.00}", latestReceivedPressure);
             }
@@ -610,6 +623,11 @@ namespace Ozonesonde_Viewer_2019
             textBuilder.AppendLine("allen.jordan@noaa.gov");
             textBuilder.Append("https://www.esrl.noaa.gov/gmd/ozwv/");
             MessageBox.Show(this, textBuilder.ToString(), "About", MessageBoxButtons.OK, MessageBoxIcon.None);
+        }
+
+        private void showPlotToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ozonePlotForm.Show();
         }
     }
 }

@@ -48,6 +48,7 @@
             this.pressureForCalculationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showPlotToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox1.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -216,7 +217,8 @@
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.pressureForCalculationsToolStripMenuItem});
+            this.pressureForCalculationsToolStripMenuItem,
+            this.showPlotToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             this.optionsToolStripMenuItem.Text = "&Options";
@@ -239,9 +241,16 @@
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
             this.aboutToolStripMenuItem.Text = "&About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
+            // 
+            // showPlotToolStripMenuItem
+            // 
+            this.showPlotToolStripMenuItem.Name = "showPlotToolStripMenuItem";
+            this.showPlotToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.showPlotToolStripMenuItem.Text = "&Show Plot";
+            this.showPlotToolStripMenuItem.Click += new System.EventHandler(this.showPlotToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -292,5 +301,6 @@
         private System.Windows.Forms.ToolStripMenuItem pressureForCalculationsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showPlotToolStripMenuItem;
     }
 }
