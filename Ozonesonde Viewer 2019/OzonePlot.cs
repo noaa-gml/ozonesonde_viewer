@@ -122,23 +122,23 @@ namespace Ozonesonde_Viewer_2019
                     break;
                 case "Cell Current":
                     dataListList = cellIListList;
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Cell Current [uA]";
                     break;
                 case "Pump Temperature":
                     dataListList = pumpTempListList;
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Pump Temperature [deg C]";
                     break;
                 case "Pump Current":
                     dataListList = pumpIListList;
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Pump Current [mA]";
                     break;
                 case "Battery Voltage":
                     dataListList = batVListList;
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Battery Voltage [V]";
                     break;
                 case "Pump Motor RPM":
                     dataListList = pumpMotorRPMListList;
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Pump Motor Speed [RPM]";
                     break;
                 default:
                     throw new Exception("Unrecognized y axis type");
