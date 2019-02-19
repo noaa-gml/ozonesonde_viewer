@@ -147,7 +147,10 @@ namespace Ozonesonde_Viewer_2019
             //build the graph curves
             for (int dataIndex = 0; dataIndex < dataListList.Count; dataIndex++)
             {
-                var colorIndex = (int)Math.Round((((float)dataIndex + 1) / (dataListList.Count)) * (colorList.Count - 1), 0);
+                var colorIndex = 0;
+                if (dataListList.Count > 1)
+                    colorIndex = (int)(((float)dataIndex) * ((float)colorList.Count - 1) / (dataListList.Count - 1));
+                if ((colorIndex < 0) || (colorIndex > colorList.Count)) throw new Exception("Plot color index out of range");
                 var color = colorList[colorIndex];
 
                 var dataList = dataListList[dataIndex];
