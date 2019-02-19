@@ -19,6 +19,8 @@ namespace Ozonesonde_Viewer_2019
     {
         public List<OzonesondeConfig> ResultingOzonesondeConfigList { get; private set; }
 
+        private string settingsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Ozonesonde Viewer");
         private string settingsFilename;
 
         public ConfigForm()
@@ -26,8 +28,7 @@ namespace Ozonesonde_Viewer_2019
             try
             {
                 settingsFilename = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Ozonesonde Viewer",
+                    settingsDir,
                     "OzonesondeViewerSettings.json");
 
                 InitializeComponent();
@@ -127,6 +128,8 @@ namespace Ozonesonde_Viewer_2019
             try
             {
                 ResultingOzonesondeConfigList = (from TabPage t in tabControl1.TabPages select ((OzonesondeConfigControl)t.Controls[0]).GetOzonesondeConfig()).ToList();
+
+                if (!Directory.Exists(settingsDir)) Directory.CreateDirectory(settingsDir);
 
                 StreamWriter writer = new StreamWriter(new FileStream(settingsFilename, FileMode.Create, FileAccess.Write));
                 foreach (var ozoneConfig in ResultingOzonesondeConfigList)

@@ -147,7 +147,7 @@ namespace Ozonesonde_Viewer_2019
             //build the graph curves
             for (int dataIndex = 0; dataIndex < dataListList.Count; dataIndex++)
             {
-                var colorIndex = (int)Math.Round((((float)dataIndex) / (dataListList.Count - 1)) * (colorList.Count - 1), 0);
+                var colorIndex = (int)Math.Round((((float)dataIndex + 1) / (dataListList.Count)) * (colorList.Count - 1), 0);
                 var color = colorList[colorIndex];
 
                 var dataList = dataListList[dataIndex];
