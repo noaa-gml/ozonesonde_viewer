@@ -87,7 +87,7 @@ namespace Ozonesonde_Viewer_2019
                     outputFileWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
 
                     //write out the header information for the cutter and each ozonesonde
-                    await outputFileWriter.WriteAsync("Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
+                    await outputFileWriter.WriteAsync("Date/Time [UTC], Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
                     foreach (var ozoneConfig in ozonesondeConfigList)
                     {
                         await outputFileWriter.WriteAsync(
@@ -388,7 +388,7 @@ namespace Ozonesonde_Viewer_2019
                         //start the file output
                         //if (fileWriterTask != null) await fileWriterTask;
                         //fileWriterTask = OutputDataFileRow();
-                        await OutputDataFileAndPlotAsync();
+                        await OutputDataFileAndPlotAsync(utcNow);
                     }
 
                     string adBoardType = "Unknown";
@@ -502,11 +502,20 @@ namespace Ozonesonde_Viewer_2019
             //todo: other exception types?
         }
 
-        private async Task OutputDataFileAndPlotAsync()
+        private async Task OutputDataFileAndPlotAsync(DateTime dateTimeToUseUTC)
         {
+            string dateTimeStrUTC = string.Format("{0:d4}/{1:d2}/{2:d2} {3:d2}:{4:d2}:{5:d2}",
+                dateTimeToUseUTC.Year,
+                dateTimeToUseUTC.Month,
+                dateTimeToUseUTC.Day,
+                dateTimeToUseUTC.Hour,
+                dateTimeToUseUTC.Minute,
+                dateTimeToUseUTC.Second
+                );
             StringBuilder fileOutputBuilder = new StringBuilder();
             //output the cutter data to file
-            fileOutputBuilder.Append(string.Format("{0:0.00}, {1:0.00}, {2:0.00}, {3:0.}, {4:0.0}",
+            fileOutputBuilder.Append(string.Format("{0}, {1:0.00}, {2:0.00}, {3:0.00}, {4:0.}, {5:0.0}",
+                dateTimeStrUTC,
                 latestReceivedPressure,
                 latestCutterPressureSensorTemperature,
                 latestCutterBoardTemperature,
