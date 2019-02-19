@@ -258,6 +258,9 @@ namespace Ozonesonde_Viewer_2019
         private const byte INSTRUMENT_OZONESONDE = 0x01;
         private const byte INSTRUMENT_OZONESONDE_X1 = 0x03;//the X1 board's packet uses a different ID and includes pump motor RPM
         private const byte INSTRUMENT_CUTTER = 0x11;
+        private const int OZONE_SIZE = 13*2;
+        private const int OZONE_X1_SIZE = 15*2;
+        private const int CUTTER_PACKET_SIZE = 32;
         private const int CELL_CURRENT_OFFSET = 10;
         private const int CELL_CURRENT_SIZE = 4;
         private const int PUMP_TEMPERATURE_OFFSET = 14;
@@ -295,6 +298,13 @@ namespace Ozonesonde_Viewer_2019
         {
             try
             {
+                //if the line length is not recognized, just return
+                if ((line.Length != OZONE_SIZE) && (line.Length != OZONE_X1_SIZE) && (line.Length != CUTTER_PACKET_SIZE))
+                {
+                    //throw new SerialLineFormatException("Invalid packet line length, skipping it");
+                    return;
+                }
+
                 //check for unrecognized serial data lines (ignoring the first line, as it's usually garbage)
                 if (!isFirstLine)
                 {
@@ -308,7 +318,9 @@ namespace Ozonesonde_Viewer_2019
                 if (dcIndex < 1) throw new Exception("Invalid daisy chain index");
                 if ((instrumentID == INSTRUMENT_OZONESONDE) || (instrumentID == INSTRUMENT_OZONESONDE_X1))
                 {
-                    
+                    //line length check
+                    if ((line.Length != OZONE_SIZE) && (line.Length != OZONE_X1_SIZE))
+                        throw new SerialLineFormatException("Invalid ozonesonde packet line length, skipping it");
 
                     //make sure that the pressure cutter is at the end of the daisy chain, otherwise it shifts the ozonesonde dc indices
                     if ((cutterDCIndex > 0) && (dcIndex > cutterDCIndex)) throw new SerialLineFormatException("The pressure cutter needs to be at the end of the chain");
@@ -420,6 +432,12 @@ namespace Ozonesonde_Viewer_2019
                         pumpMotorRPM = ((double)IntFromMSBHexString(line.Substring(PUMP_MOTOR_RPM_OFFSET, PUMP_MOTOR_RPM_SIZE))) / 10.0;
 
                         adBoardType = "X1";
+                    }
+                    //if we still don't have good ozonesonde data, just return
+                    if (double.IsNaN(cellCurrent))
+                    {
+                        ShowError("Ozone packet received, but parsing failed");
+                        return;
                     }
 
                     //select the dataset to update based on the daisy chain index
@@ -595,6 +613,8 @@ namespace Ozonesonde_Viewer_2019
 
         private void DrawStatusCircle(bool isFilled, uint circleIndex, string text, Color filledColor)
         {
+            if (ozoneStatusPanel.IsDisposed) return;
+
             var g = ozoneStatusPanel.CreateGraphics();
             var circleDia = ozoneStatusPanel.Height - 15 - 1;
             int xPos = ((int)circleIndex) * (circleDia + 3);
