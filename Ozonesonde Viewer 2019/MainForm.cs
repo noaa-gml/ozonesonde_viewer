@@ -258,7 +258,7 @@ namespace Ozonesonde_Viewer_2019
         private const byte INSTRUMENT_OZONESONDE = 0x01;
         private const byte INSTRUMENT_OZONESONDE_X1 = 0x03;//the X1 board's packet uses a different ID and includes pump motor RPM
         private const byte INSTRUMENT_CUTTER = 0x11;
-        private const int OZONE_SIZE = 13*2;
+        private const int OZONE_SIZE = 11*2;
         private const int OZONE_X1_SIZE = 15*2;
         private const int CUTTER_PACKET_SIZE = 32;
         private const int CELL_CURRENT_OFFSET = 10;
