@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Ozonesonde pump efficiency corrections-->
+
+<!--
+Use the following cubic polynomial with the PC0-PC3 terms:
+p = pressure [mb]
+x = 1 + 1/ln(p)
+pump eff corr = PC0 + PC1*x + PC2*x^2 + PC3*x^3
+-->
+
+<pumpEffCorrectionOptions>
+
+  <pumpEffCorrection>
+    <name>NOAA Average (Johnson et al. 2002)</name>
+    <description>An average of 'all' NOAA measured pump efficiencies from Johnson et al. 2002</description>
+    <type>Cubic Polynomial Terms</type>
+    <PC0>1.1804</PC0>
+    <PC1>-0.9186</PC1>
+    <PC2>0.8291</PC2>
+    <PC3>-0.1431</PC3>
+  </pumpEffCorrection>
+
+  <pumpEffCorrection>
+		<name>SkySonde Default 2012 (2ZNOAA)</name>
+		<description>The current default pump efficiency correction polynomial used by SkySonde Client, for EN-SCI 2Z-type ozonesondes</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>4.0564</PC0>
+		<PC1>-7.0851</PC1>
+		<PC2>5.1822</PC2>
+		<PC3>-1.1581</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>Strato Default</name>
+		<description>The default pump efficiency correction used in Holger Vomel's Strato program, similar to the 1ZAVG correction</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>5.475537</PC0>
+		<PC1>-10.432013</PC1>
+		<PC2>7.774825</PC2>
+		<PC3>-1.818522</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>1ZAVG</name>
+		<description>An average of EN-SCI 1Z-type ozonesonde pump efficiencies</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>3.5025</PC0>
+		<PC1>-5.8894</PC1>
+		<PC2>4.3261</PC2>
+		<PC3>-0.9549</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>5ATBMT</name>
+		<description>An average of Science Pump 5A-type ozonesonde pump efficiencies taken at Table Mountain in California</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>1.3513</PC0>
+		<PC1>-0.969</PC1>
+		<PC2>0.7313</PC2>
+		<PC3>-0.1357</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>5ANOAA</name>
+		<description>An average of Science Pump 5A-type ozonesonde pump efficiencies taken at NOAA (from the Komhyr '86 manual)</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>2.5636</PC0>
+		<PC1>-3.7047</PC1>
+		<PC2>2.8036</PC2>
+		<PC3>-0.6651</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>6AAVG</name>
+		<description>An average of Science Pump 6A-type ozonesonde pump efficiencies</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>2.8921</PC0>
+		<PC1>-4.8563</PC1>
+		<PC2>3.7928</PC2>
+		<PC3>-0.8716</PC3>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>SkySonde Default (2ZNOAA)</name>
+		<description>(Deprecated - use 'SkySonde Default 2012' instead.)  This is the default pressure / pump eff corr list used by SkySonde Client versions before July 2012, for EN-SCI 2Z-type ozonesondes.  </description>
+		<type>Pressure-Correction Pairs</type>
+		<pressures>1000, 500, 300, 200, 150, 100, 50, 30, 20, 10, 7, 5</pressures>
+		<corrections>1.000, 1.003, 1.006, 1.010, 1.014, 1.025, 1.041, 1.056, 1.074, 1.137, 1.191, 1.255</corrections>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>5AAVG</name>
+		<description>An average of Science Pump 5A-type ozonesonde pump efficiencies</description>
+		<type>Pressure-Correction Pairs</type>
+		<pressures>1000, 300, 100, 50, 30, 20, 10, 7, 5</pressures>
+		<corrections>1.00000, 1.00000, 1.02452, 1.03726, 1.05141, 1.06872, 1.12868, 1.17903, 1.24346</corrections>
+	</pumpEffCorrection>
+	
+	<pumpEffCorrection>
+		<name>NIWA</name>
+		<description>This correction is used by NIWA in New Zealand, and is similar to the Komhyr manual (1995 or 1996)</description>
+		<type>Cubic Polynomial Terms</type>
+		<PC0>0.364</PC0>
+		<PC1>1.0523</PC1>
+		<PC2>-0.6384</PC2>
+		<PC3>0.1715</PC3>
+		
+		<!--<pressures>300, 200, 150, 100, 70, 50, 30, 20, 15, 10, 7, 5, 3</pressures>-->
+		<!--<corrections>1.000, 1.000, 1.002, 1.007, 1.013, 1.018, 1.029, 1.041, 1.048, 1.066, 1.087, 1.124, 1.24</corrections>-->
+	</pumpEffCorrection>
+	
+</pumpEffCorrectionOptions>

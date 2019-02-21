@@ -27,6 +27,8 @@ namespace Ozonesonde_Viewer_2019
         {
             try
             {
+                PumpEfficiency.PumpEfficiencyParser.LoadXMLPumpEfficiencyCorrections();
+
                 settingsFilename = Path.Combine(
                     settingsDir,
                     "OzonesondeViewerSettings.json");
@@ -57,7 +59,7 @@ namespace Ozonesonde_Viewer_2019
                 else
                 {
                     //default to a single ozonesonde at the first daisy chain index
-                    ozoneConfigList.Add(new OzonesondeConfig(1, 0.01, 28, 3.1));
+                    ozoneConfigList.Add(new OzonesondeConfig(1, 0.01, 28, 3.1, "NOAA Average (Johnson et al. 2002)"));
                 }
 
                 //build the tab pages based on the ozone configs
@@ -98,7 +100,7 @@ namespace Ozonesonde_Viewer_2019
             uint dcIndex = (uint)(tabControl1.TabPages.Count + 1);
             tabControl1.TabPages.Add("Sonde " + dcIndex);
 
-            OzonesondeConfig oc = new OzonesondeConfig(dcIndex, 0.01, 28, 3.1);
+            OzonesondeConfig oc = new OzonesondeConfig(dcIndex, 0.01, 28, 3.1, "NOAA Average (Johnson et al. 2002)");
             OzonesondeConfigControl occ = new OzonesondeConfigControl(oc);
             tabControl1.TabPages[tabControl1.TabPages.Count-1].Controls.Add(occ);
             tabControl1.TabPages[tabControl1.TabPages.Count - 1].BackColor = Color.White;

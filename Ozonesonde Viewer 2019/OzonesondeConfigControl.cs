@@ -25,6 +25,15 @@ namespace Ozonesonde_Viewer_2019
             cellBackgroundTextBox.Text = string.Format("{0:0.000}", ozoneConfig.CellBackground);
             pumpFlowrateTextBox.Text = string.Format("{0:0.000}", ozoneConfig.PumpFlowrate);
             rhFlowrateCorrTextBox.Text = string.Format("{0:0.000}", ozoneConfig.RHFlowrateCorr);
+
+            //populate the pump efficiency combo box with all available options
+            pumpEffComboBox.Items.AddRange(PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.ToArray());
+
+            //find the config's pump efficiency and set the combobox to this index
+            int pumpEffIndex = PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.FindIndex(y => (y.Name == ozoneConfig.PumpEfficiencyName));
+            if ((pumpEffIndex < 0) || (pumpEffIndex >= PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.Count))
+                throw new Exception("Invalid pump efficiency: " + ozoneConfig.PumpEfficiencyName);
+            pumpEffComboBox.SelectedIndex = pumpEffIndex;
         }
 
         public OzonesondeConfig GetOzonesondeConfig()
@@ -43,7 +52,9 @@ namespace Ozonesonde_Viewer_2019
                 throw new Exception("Invalid rh flowrate correction");
             if ((rhFlowrateCorrection < 0) || (rhFlowrateCorrection > 100)) throw new Exception("Invalid rh flowrate correction range");
 
-            return new OzonesondeConfig(dcIndex, cellBackground, pumpFlowrate, rhFlowrateCorrection);
+            var pumpEff = (PumpEfficiency.PumpEfficiency)pumpEffComboBox.SelectedItem;
+
+            return new OzonesondeConfig(dcIndex, cellBackground, pumpFlowrate, rhFlowrateCorrection, pumpEff.Name);
         }
     }
 }

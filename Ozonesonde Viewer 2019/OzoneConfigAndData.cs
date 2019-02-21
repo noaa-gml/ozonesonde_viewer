@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace Ozonesonde_Viewer_2019
 {
@@ -9,13 +10,15 @@ namespace Ozonesonde_Viewer_2019
         public double CellBackground { get; private set; }//[uA]
         public double PumpFlowrate { get; private set; }//[sec / 100 ml]
         public double RHFlowrateCorr { get; private set; }//[%]
+        public string PumpEfficiencyName { get; private set; }
 
-        public OzonesondeConfig(uint dcIndex, double cellBackground, double pumpFlowrate, double rhFlowrateCorr)
+        public OzonesondeConfig(uint dcIndex, double cellBackground, double pumpFlowrate, double rhFlowrateCorr, string pumpEfficiencyName)
         {
             DCIndex = dcIndex;
             CellBackground = cellBackground;
             PumpFlowrate = pumpFlowrate;
             RHFlowrateCorr = rhFlowrateCorr;
+            PumpEfficiencyName = pumpEfficiencyName;
         }
     }
 
@@ -60,18 +63,31 @@ namespace Ozonesonde_Viewer_2019
         //calculate the ozone partial pressure and mixing ratio from the already-populated ozone fields stored in this class
         public void CalculatePartialPressureAndMixingRatio(double pressure)
         {
+            bool pressureGood = !double.IsNaN(pressure) && (pressure > 0) && (pressure < 1200);
+
+            //if the pressure is bad/missing, default to a pump efficiency of 1.0 (perfectly effecient)
+            double effCorr = 1.0;
+            if (pressureGood)
+            {
+                //get the pump efficiency class matching the config name (TODO: not very efficient to do this every time)
+                var matchingPumpEffs = from p in PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList where (p.Name == OzoneConfig.PumpEfficiencyName) select p;
+                if (matchingPumpEffs.Count() != 1) throw new Exception("Could not find matching pump efficiency correction");
+                var pumpEff = matchingPumpEffs.First();
+                effCorr = pumpEff.GetPumpEfficiencyCorrection(pressure);
+
+                if (double.IsNaN(effCorr) || (effCorr < 0.5) || (effCorr > 3)) throw new Exception("Invalid pump efficiency correction value: " + effCorr);
+            }
+
             //calculate partial pressure
             //NOTE: no pump efficiency correction applied since this program expects ground-level ozonesondes
-            double correctedFlowrate = /*effCorr **/
-                    OzoneConfig.PumpFlowrate * (1 + OzoneConfig.RHFlowrateCorr / 100);
+            double correctedFlowrate = effCorr * OzoneConfig.PumpFlowrate * (1 + OzoneConfig.RHFlowrateCorr / 100);
+
             OzonePartialPressure =
                 4.3085E-4 * (CellCurrent - OzoneConfig.CellBackground) * (PumpTemperature + 273.15) * correctedFlowrate;
 
             //calculate mixing ratio if we have a good pressure
-            if (!double.IsNaN(pressure) && (pressure > 0) && (pressure < 1200))
-            {
+            if (pressureGood)
                 OzoneMixingRatio = OzonePartialPressure / pressure * 10 * 1000;//the last * 1000 converts to ppb
-            }
         }
     }
 
