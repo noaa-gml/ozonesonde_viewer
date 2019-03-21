@@ -25,74 +25,66 @@ namespace Ozonesonde_Viewer_2019
 
         public ConfigForm()
         {
-            try
+            PumpEfficiency.PumpEfficiencyParser.LoadXMLPumpEfficiencyCorrections();
+
+            settingsFilename = Path.Combine(
+                settingsDir,
+                "OzonesondeViewerSettings.json");
+
+            InitializeComponent();
+
+            this.Text = "Ozonesonde Viewer 2019 Config " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            ResultingOzonesondeConfigList = null;
+
+            pictureBox1.Image = Image.FromFile("instrument selection graphic.png");
+
+            //deserialize the ozone configuration settings
+            List<OzonesondeConfig> ozoneConfigList = new List<OzonesondeConfig>();
+            if (File.Exists(settingsFilename))
             {
-                PumpEfficiency.PumpEfficiencyParser.LoadXMLPumpEfficiencyCorrections();
-
-                settingsFilename = Path.Combine(
-                    settingsDir,
-                    "OzonesondeViewerSettings.json");
-
-                InitializeComponent();
-
-                this.Text = "Ozonesonde Viewer 2019 Config " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
-
-                ResultingOzonesondeConfigList = null;
-
-                pictureBox1.Image = Image.FromFile("instrument selection graphic.png");
-
-                //deserialize the ozone configuration settings
-                List<OzonesondeConfig> ozoneConfigList = new List<OzonesondeConfig>();
-                if (File.Exists(settingsFilename))
+                StreamReader reader = new StreamReader(settingsFilename);
+                while (!reader.EndOfStream)
                 {
-                    StreamReader reader = new StreamReader(settingsFilename);
-                    while (!reader.EndOfStream)
+                    string line = reader.ReadLine();
+                    if (line.Length > 0)
                     {
-                        string line = reader.ReadLine();
-                        if (line.Length > 0)
-                        {
-                            ozoneConfigList.Add(JsonConvert.DeserializeObject<OzonesondeConfig>(line));
-                        }
+                        ozoneConfigList.Add(JsonConvert.DeserializeObject<OzonesondeConfig>(line));
                     }
-                    reader.Close();
                 }
-                else
-                {
-                    //default to a single ozonesonde at the first daisy chain index
-                    ozoneConfigList.Add(new OzonesondeConfig(1, 0.01, 28, 3.1, "NOAA Average (Johnson et al. 2002)"));
-                }
-
-                //build the tab pages based on the ozone configs
-                for (int configIndex = 0; configIndex < ozoneConfigList.Count; configIndex++)
-                {
-                    uint dcIndex = 1;
-                    if (configIndex > 0)
-                    {
-                        dcIndex = (uint)(tabControl1.TabPages.Count + 1);
-                        tabControl1.TabPages.Add("Sonde " + dcIndex);
-                    }
-
-                    var oc = ozoneConfigList[configIndex];
-                    if (oc.DCIndex != dcIndex) throw new Exception("dc index mismatch when restoring settings");
-
-                    OzonesondeConfigControl occ = new OzonesondeConfigControl(oc);
-                    tabControl1.TabPages[tabControl1.TabPages.Count - 1].Controls.Add(occ);
-                    tabControl1.TabPages[tabControl1.TabPages.Count - 1].BackColor = Color.White;
-                }
-
-                //get the existing serial port names
-                List<string> portNames = new List<string>(SerialPort.GetPortNames());
-                portNames.Sort();
-                portComboBox.Items.AddRange(portNames.ToArray());
-                portComboBox.Text = Properties.Settings.Default.Port;
-
-                OnResize(EventArgs.Empty);
+                reader.Close();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show(this, ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                this.Close();
+                //default to a single ozonesonde at the first daisy chain index
+                ozoneConfigList.Add(new OzonesondeConfig(1, 0.01, 28, 3.1, "NOAA Average (Johnson et al. 2002)"));
             }
+
+            //build the tab pages based on the ozone configs
+            for (int configIndex = 0; configIndex < ozoneConfigList.Count; configIndex++)
+            {
+                uint dcIndex = 1;
+                if (configIndex > 0)
+                {
+                    dcIndex = (uint)(tabControl1.TabPages.Count + 1);
+                    tabControl1.TabPages.Add("Sonde " + dcIndex);
+                }
+
+                var oc = ozoneConfigList[configIndex];
+                if (oc.DCIndex != dcIndex) throw new Exception("dc index mismatch when restoring settings");
+
+                OzonesondeConfigControl occ = new OzonesondeConfigControl(oc);
+                tabControl1.TabPages[tabControl1.TabPages.Count - 1].Controls.Add(occ);
+                tabControl1.TabPages[tabControl1.TabPages.Count - 1].BackColor = Color.White;
+            }
+
+            //get the existing serial port names
+            List<string> portNames = new List<string>(SerialPort.GetPortNames());
+            portNames.Sort();
+            portComboBox.Items.AddRange(portNames.ToArray());
+            portComboBox.Text = Properties.Settings.Default.Port;
+
+            OnResize(EventArgs.Empty);
         }
 
         private void addNewOzonesondeButton_Click(object sender, EventArgs e)

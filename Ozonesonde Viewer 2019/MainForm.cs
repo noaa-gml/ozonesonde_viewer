@@ -59,6 +59,7 @@ namespace Ozonesonde_Viewer_2019
 
                 //show the config form as a dialog, receiving ozonesonde metadata, setial port info, etc
                 ConfigForm config = new ConfigForm();
+                if ((config == null) || (config.IsDisposed)) this.Close();
                 if (config.ShowDialog() != DialogResult.OK)
                     this.Close();
                 var ozonesondeConfigList = config.ResultingOzonesondeConfigList;

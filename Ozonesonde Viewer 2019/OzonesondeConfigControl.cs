@@ -32,7 +32,11 @@ namespace Ozonesonde_Viewer_2019
             //find the config's pump efficiency and set the combobox to this index
             int pumpEffIndex = PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.FindIndex(y => (y.Name == ozoneConfig.PumpEfficiencyName));
             if ((pumpEffIndex < 0) || (pumpEffIndex >= PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.Count))
-                throw new Exception("Invalid pump efficiency: " + ozoneConfig.PumpEfficiencyName);
+            {
+                MessageBox.Show("Unknown initial pump efficiency, setting to default");
+                //throw new Exception("Invalid pump efficiency: " + ozoneConfig.PumpEfficiencyName);
+                PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.First();
+            }
             pumpEffComboBox.SelectedIndex = pumpEffIndex;
         }
 

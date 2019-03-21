@@ -67,6 +67,7 @@ Section "${PROG_NAME} Program (required)" programSectionDescription
 	File "${EXEC_PATH}\*.dll"
 	File "${EXEC_PATH}\bright_rainbow.csv"
 	File "${EXEC_PATH}\instrument selection graphic.png"
+	File "${EXEC_PATH}\pumpEff.xml"
 	
 	#library license files:
 	#File "zedgraph license.txt"
