@@ -545,6 +545,7 @@ namespace Ozonesonde_Viewer_2019
                     ocadToUse.PumpMotorRPM
                     ));
 
+                //update the plot data
                 ozonePlotForm.AddOzoneDataPoint(ocadToUse);
 
                 //indicate that the packet has already been output to file and shouldn't be output again
