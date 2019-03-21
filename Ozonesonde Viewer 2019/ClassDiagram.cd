@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Ozonesonde_Viewer_2019.ConfigForm">
+    <Position X="4" Y="0.5" Width="2.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAEiAAAJBAgASABAACAAABAEAAAAAAQCBBBAA=</HashCode>
+      <FileName>ConfigForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.HelperMethods" Collapsed="true">
+    <Position X="9.25" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>HelperMethods.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.SerialLineFormatException" Collapsed="true">
+    <Position X="9.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>HelperMethods.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.MainForm">
+    <Position X="0.5" Y="0.5" Width="3.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>IROIBVmQQCMCAB8AoQSTUAgCQBDEBICGiiSGLA0AFmA=</HashCode>
+      <FileName>MainForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.OzonesondeConfig">
+    <Position X="0.5" Y="9" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAIAAAQAAAAAAAAAAAAAAAAAAABCAAAAAAIA=</HashCode>
+      <FileName>OzoneConfigAndData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.OzoneConfigAndData">
+    <Position X="0.5" Y="5.25" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAQAQAACkAAQAAAAACAAAAAAIAAAACAAAACQAAAAEA=</HashCode>
+      <FileName>OzoneConfigAndData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.OzonePlot">
+    <Position X="4" Y="3.75" Width="3" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Delegate Name="Ozonesonde_Viewer_2019.OzonePlot.AddOzoneDataPointDelegate" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>OzonePlot.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AGAABAYAQCgAghAAAACAIBCCAAAAAKAKIACEAAAAAEA=</HashCode>
+      <FileName>OzonePlot.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.OzonesondeConfigControl">
+    <Position X="6.5" Y="0.5" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAADAAACAAABAAAECIAAACAAAAAACAACAAAAAgAAA=</HashCode>
+      <FileName>OzonesondeConfigControl.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.PressureForCalculationsForm" Collapsed="true">
+    <Position X="8.75" Y="6" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAACAAABAAAACAAAICAAAAEAAAACAAAgAAAAA=</HashCode>
+      <FileName>PressureForCalculationsForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.Program" Collapsed="true">
+    <Position X="11.25" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAA=</HashCode>
+      <FileName>Program.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.ExtensionMethods.ControlExtensions" Collapsed="true">
+    <Position X="11.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAACAgAAAA=</HashCode>
+      <FileName>Program.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.Properties.Resources" Collapsed="true">
+    <Position X="11.25" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABEAAAAQAAAAAAAAAAAAAAAIA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.Properties.Settings" Collapsed="true">
+    <Position X="11.25" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAIAAACAABAAAAAAAAAAAAAAA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.PumpEfficiency.CubicCoeffPumpEfficiency" Collapsed="true">
+    <Position X="9" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAEAAAAIAAAAICAAAAAAAAAEAAAAAAAAAAAAAA=</HashCode>
+      <FileName>PumpEfficiency\CubicCoeffPumpEfficiency.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.PumpEfficiency.PressureCorrPairsPumpEfficiency" Collapsed="true">
+    <Position X="11.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAgkAAAAAAAAAICAAAAQAAAAEAAAAAAAAAAAAAA=</HashCode>
+      <FileName>PumpEfficiency\PressureCorrPairsPumpEfficiency.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.PumpEfficiency.PumpEfficiency" Collapsed="true">
+    <Position X="11" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAEAAAgAAAEAICAAAQAAAAAEAAAAAAAAAAAAAA=</HashCode>
+      <FileName>PumpEfficiency\PumpEfficiency.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Ozonesonde_Viewer_2019.PumpEfficiency.PumpEfficiencyParser" Collapsed="true">
+    <Position X="9" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAABAA=</HashCode>
+      <FileName>PumpEfficiency\PumpEfficiencyParser.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
