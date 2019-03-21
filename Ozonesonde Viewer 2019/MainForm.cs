@@ -114,8 +114,11 @@ namespace Ozonesonde_Viewer_2019
             }
             catch (Exception ex)
             {
-                ShowError(ex.Message);
-                MessageBox.Show(this, ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (!this.IsDisposed)
+                {
+                    ShowError(ex.Message);
+                    MessageBox.Show(this, ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 this.Close();
             }
         }

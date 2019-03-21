@@ -36,6 +36,7 @@ namespace Ozonesonde_Viewer_2019
                 MessageBox.Show("Unknown initial pump efficiency, setting to default");
                 //throw new Exception("Invalid pump efficiency: " + ozoneConfig.PumpEfficiencyName);
                 PumpEfficiency.PumpEfficiencyParser.PumpEfficiencyList.First();
+                pumpEffIndex = 0;
             }
             pumpEffComboBox.SelectedIndex = pumpEffIndex;
         }
