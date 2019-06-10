@@ -80,16 +80,24 @@ namespace Ozonesonde_Viewer_2019
                 {
                     //the filename has year/month/day and is written to "<AppData>\Ozonesonde Viewer"
                     DateTime utcNow = DateTime.UtcNow;
-                    string outputDataFilename = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Ozonesonde Viewer",
-                    string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}.csv", utcNow.Year, utcNow.Month, utcNow.Day));
+
+                    //loop until we get a filename that doesn't already exist (to allow multiple instances of this program to run without writing to the same file simultaneously)
+                    int count = 1;
+                    string outputDataFilename = "";
+                    do
+                    {
+                        outputDataFilename = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                            "Ozonesonde Viewer",
+                            string.Format("ozonesondeViewerData_{0:d4}{1:d2}{2:d2}_{3:d2}{4:d2}{5:d2}_{6:d}.csv", utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second, count));
+                        count++;
+                    } while (File.Exists(outputDataFilename));
                     //open the file for writing (will append instead of overwrite)
-                    outputFileWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));
+                    outputFileWriter = new StreamWriter(new FileStream(outputDataFilename, FileMode.Append, FileAccess.Write));//append isn't necessary here thanks to the existence check above, but I'm including it for safety
 
                     //write out the header information for the cutter and each ozonesonde
                     await outputFileWriter.WriteAsync("Date/Time [UTC], Cutter Pressure [mb], Cutter Pressure Sensor Temperature [deg C], Cutter Board Temperature [deg C], Cutter Heater [PWM], Cutter Battery Voltage [V]");
-                    foreach (var ozoneConfig in ozonesondeConfigList)
+                    foreach (var ozoneConfig in ozonesondeConfigList);
                     {
                         await outputFileWriter.WriteAsync(
                             ", DC Index, Ozone Mixing Ratio [ppbv], Ozone Partial Pressure [mPa], Cell Current [uA], Pump Temperature [deg C], Pump Current [mA], Battery Voltage [V], Pump Speed [RPM]");
